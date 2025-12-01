@@ -215,16 +215,13 @@
 
     /* =======================
        Liste des plans (modifiable)
-       Met ici les PDFs — peut être local (Plans_Villa_AR.pdf) ou URL complète GitHub Pages
-       Exemples :
-        "Plans_Villa_AR.pdf"  (même dossier)
-        "https://betdelest.github.io/betl-models/plans/Plans_Villa_AR.pdf"
+       Met ici les PDFs — si tu les héberges sur GitHub Pages, mets l'URL complète
+       NOTE: j'ai remplacé le nom avec underscores pour éviter problèmes d'espaces
     =========================*/
     const PLANS = [
-      { id: 'arch', name: 'Plan Architecture - Villa', file: 'Plans_Villa_AR.pdf', desc: 'Plans architecturaux (A3, coupes, façades)' },
+      { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)' },
       { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul' },
-      // Ajoute d'autres éléments si nécessaire
-      // { id:'elect', name:'Plan Electricité', file:'Plans_Electricite.pdf', desc:'Schéma électrique' }
+      // ajouter d'autres plans si besoin
     ];
 
     const modalBackdrop = document.getElementById('modalBackdrop');
@@ -242,7 +239,6 @@
     function renderPlans() {
       plansList.innerHTML = '';
       PLANS.forEach(plan=>{
-        // créer item
         const item = document.createElement('div');
         item.className = 'plan-item';
 
@@ -278,38 +274,75 @@
       });
     }
 
-    function openPDF(url) {
-      // si url n'est pas une URL complète, on suppose qu'il est dans le même dossier
-      const final = resolvePDF(url);
-      window.open(final, '_blank');
+    /* ===============
+       Résolution et téléchargement des PDF - méthode fiable
+       - resolvePDF: encode correctement les chemins et gère URL complètes
+       - openPDF: ouvre dans un nouvel onglet (fallback simple)
+       - downloadPDF: fetch -> blob -> download (force le download si possible)
+       - downloadAll: lance les téléchargements séquentiels avec petit délai
+       ===============*/
+
+    function resolvePDF(path) {
+      if (!path) return '';
+      // si c'est une URL complète, encode et retourne
+      if (/^https?:\/\//i.test(path)) return encodeURI(path);
+
+      // sinon, on suppose fichier local dans le même dossier que l'index.html
+      // encodeURI pour gérer espaces et caractères spéciaux
+      return encodeURI(path);
+      // Si tu préfères utiliser GitHub Pages absolu, remplace par :
+      // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
     }
 
-    function downloadPDF(url) {
-      const final = resolvePDF(url);
-      // Forcer téléchargement : créer un <a download>
-      const a = document.createElement('a');
-      a.href = final;
-      // si le fichier vient d'un autre domaine, 'download' peut être ignoré par le navigateur
-      a.setAttribute('download', '');
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    function openPDF(path) {
+      const final = resolvePDF(path);
+      try {
+        window.open(final, '_blank');
+      } catch (err) {
+        console.error('openPDF error', err);
+        alert('Impossible d’ouvrir le PDF directement. Vérifie l’URL.');
+      }
+    }
+
+    async function downloadPDF(path) {
+      const final = resolvePDF(path);
+      try {
+        const resp = await fetch(final, { method: 'GET', mode: 'cors' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const blob = await resp.blob();
+
+        // Extraire un nom correct
+        let filename = 'document.pdf';
+        const cd = resp.headers.get('Content-Disposition');
+        if (cd) {
+          const m = /filename\*?=([^;]+)/i.exec(cd);
+          if (m && m[1]) filename = m[1].replace(/['"]/g, '');
+        } else {
+          const parts = final.split('/');
+          filename = parts[parts.length - 1] || filename;
+        }
+        filename = decodeURIComponent(filename).replace(/%20/g, '_');
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.warn('downloadPDF fallback (open in new tab) - reason:', err);
+        // fallback : ouvrir dans un nouvel onglet, l'utilisateur pourra ensuite sauvegarder
+        window.open(final, '_blank');
+      }
     }
 
     function downloadAll() {
-      // Ouvre tous les fichiers dans de nouveaux onglets (certains navigateurs peuvent bloquer les popups)
-      PLANS.forEach(plan => {
-        window.open(resolvePDF(plan.file), '_blank');
+      const delay = 600; // ms entre chaque téléchargement pour réduire blocage popup
+      PLANS.forEach((plan, idx) => {
+        setTimeout(()=> downloadPDF(plan.file), idx * delay);
       });
-    }
-
-    function resolvePDF(path) {
-      // Si c'est déjà une URL complète
-      if (/^https?:\/\//i.test(path)) return path;
-      // Sinon, on suppose fichier local (même dossier que le HTML) ; tu peux changer la base si besoin
-      return path;
-      // Si tu héberges sur GitHub Pages, tu peux construire l'URL complète :
-      // return `https://betdelest.github.io/betl-models/plans/${path}`;
     }
 
   </script>
