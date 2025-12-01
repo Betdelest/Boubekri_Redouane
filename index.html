@@ -9,222 +9,265 @@
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
   <style>
-    :root{--accent:#0a84ff;--muted:#aaa;--bg:#000;--white:#fff;--glass:rgba(255,255,255,0.08);}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--white);font-family:Arial,Helvetica,sans-serif}
-
-    /* --- TOP MENU --- */
-    .top-menu{
-      position:absolute;top:10px;left:0;width:100%;
-      display:flex;justify-content:space-between;align-items:center;
-      padding:0 12px;z-index:20;
+    :root{
+      --accent:#0a84ff;
+      --muted:#aaa;
+      --bg:#000;
+      --white:#fff;
+      --glass:rgba(255,255,255,0.08);
     }
-    .left-buttons{display:flex;gap:10px;align-items:center}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--white);font-family:Arial,Helvetica,sans-serif;height:100%}
+
+    /* --- TOP MENU (scrollable if too large) --- */
+    .top-menu-wrap{
+      position:fixed;
+      top:10px;
+      left:10px;
+      right:80px; /* leave space for fixed pdf-btn on right */
+      z-index:40;
+      pointer-events:auto;
+    }
+    .top-menu{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      overflow-x:auto;
+      padding:6px;
+      background:transparent;
+      -webkit-overflow-scrolling:touch;
+    }
+    .top-menu::-webkit-scrollbar{height:8px}
     .btn{
-      padding:10px 14px;border:0;border-radius:10px;
-      background:var(--glass);color:#fff;font-size:14px;cursor:pointer;
+      padding:10px 14px;border-radius:10px;border:0;background:var(--glass);color:#fff;font-size:14px;cursor:pointer;white-space:nowrap;
       backdrop-filter:blur(4px);
     }
-    .logo-small{height:42px;border-radius:8px}
+    .logo-small{height:42px;border-radius:8px;flex:0 0 auto}
 
-    /* --- PDF ICON BUTTON --- */
+    /* --- PDF BUTTON fixed top-right (always visible) --- */
     .pdf-btn{
-      width:46px;height:46px;border-radius:12px;
-      background:#fff;border:0;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
+      position:fixed;
+      top:12px;
+      right:12px;
+      z-index:60;
+      width:46px;height:46px;border-radius:12px;background:#fff;border:0;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,0.4);
     }
-    .pdf-btn svg{width:24px;height:24px;fill:#000;}
+    .pdf-btn svg{width:24px;height:24px;fill:#000}
 
     /* --- MODEL VIEWER --- */
-    model-viewer{width:100vw;height:100vh;display:block}
+    model-viewer{width:100vw;height:100vh;display:block;background:#000}
 
-    /* --- AR BUTTON (ONLY ONE) --- */
+    /* --- AR BUTTON (unique, remonté) --- */
     .ar-button{
       position:absolute;
-      bottom:90px; /* 🔥 Remonté */
+      bottom:90px; /* remonte pour éviter scroll */
       left:50%;transform:translateX(-50%);
-      padding:14px 26px;background:#fff;color:#000;
-      border:none;border-radius:14px;font-size:16px;
-      font-weight:600;cursor:pointer;
-      box-shadow:0 10px 28px rgba(0,0,0,0.5);
-      z-index:9999;
+      padding:14px 26px;background:#fff;color:#000;border:none;border-radius:14px;font-size:16px;font-weight:600;
+      cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,0.5);z-index:9999;
+      white-space:nowrap;
     }
 
-  
+    /* --- PROGRESS --- */
+    .progress-wrap{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:30}
+    .progress{width:240px;height:10px;background:#222;border-radius:9999px;overflow:hidden}
+    .progress > span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#4bd3ff);transition:width .2s}
+    .progress-label{color:var(--muted);font-size:13px}
 
     /* --- SPLASH --- */
-    .splash{
-      position:fixed;inset:0;background:#000;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      z-index:200;
-    }
-    .splash-logo{width:260px;animation:pulse 2.6s infinite ease-in-out}
-    @keyframes pulse{0%{opacity:.8}50%{opacity:1}100%{opacity:.8}}
-    .splash.hidden{opacity:0;pointer-events:none;transition:.4s}
+    .splash{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+    .splash-logo{width:260px;max-width:60vw;animation:pulse 2.6s infinite ease-in-out}
+    @keyframes pulse{0%{opacity:.85}50%{opacity:1}100%{opacity:.85}}
+    .splash.hidden{opacity:0;pointer-events:none;transition:.35s}
 
-    /* --- MODAL PDF --- */
-    .modal-backdrop{
-      display:none;position:fixed;inset:0;z-index:80;
-      background:rgba(0,0,0,.6);align-items:center;justify-content:center;
-    }
-    .modal{
-      width:min(700px,95%);background:#111;padding:16px;border-radius:10px;
-      max-height:85vh;overflow:auto;
-    }
-    .plan-item{
-      padding:12px;background:#1a1a1a;border-radius:10px;
-      margin-bottom:8px;display:flex;justify-content:space-between;
-    }
-    .plan-actions button{
-      padding:8px 10px;border-radius:8px;border:0;background:#fff;color:#000;
-      cursor:pointer;
-    }
+    /* --- MODAL PLANS --- */
+    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:80;align-items:center;justify-content:center}
+    .modal{width:min(720px,96%);background:#111;padding:16px;border-radius:10px;max-height:86vh;overflow:auto}
+    .plan-item{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#1a1a1a;border-radius:8px;margin-bottom:8px}
+    .plan-actions button{padding:8px 10px;border-radius:8px;border:0;background:#fff;color:#000;cursor:pointer}
 
-    /* PDF preview */
-    .preview-iframe{width:90vw;height:78vh;background:#fff;border-radius:8px;border:0}
+    /* small screens adjustments */
+    @media (max-width:480px){
+      .ar-button{bottom:110px;padding:12px 20px;font-size:15px}
+      .top-menu-wrap{left:8px;right:64px}
+      .pdf-btn{width:44px;height:44px}
+    }
   </style>
 </head>
-
 <body>
 
-  <!-- TOP MENU -->
-  <div class="top-menu">
-
-    <div class="left-buttons">
-      <a href="https://www.facebook.com/BETL121" target="_blank">
-        <img src="BETL.png" class="logo-small">
+  <!-- TOP MENU: left area is scrollable if too many buttons -->
+  <div class="top-menu-wrap">
+    <div class="top-menu" id="topMenu">
+      <a href="https://www.facebook.com/BETL121" target="_blank" style="display:flex;align-items:center;">
+        <img src="BETL.png" alt="BETL" class="logo-small">
       </a>
 
       <button class="btn" onclick="switchModel('Villa_AR.glb')">Architecture</button>
       <button class="btn" onclick="switchModel('Villa_GC.glb')">Génie Civil</button>
+      <!-- tu peux ajouter d'autres boutons ici -->
     </div>
-
-    <!-- PDF BUTTON (icon-only) -->
-    <button class="pdf-btn" onclick="openPlans()">
-      <svg viewBox="0 0 24 24">
-        <path d="M5 20h14a2 2 0 002-2v-6h-2v6H5V6h6V4H5a2 2 0 00-2 2v12a2 2 0 002 2zm14-11V5h-2v3h-3v2h3v3h2v-3h3V9h-3z"/>
-      </svg>
-    </button>
-
   </div>
+
+  <!-- PDF Icon fixed top-right (NE DISPARAÎTRA PAS en paysage) -->
+  <button class="pdf-btn" onclick="openPlans()" title="Télécharger plans (PDF)">
+    <svg viewBox="0 0 24 24"><path d="M5 20h14a2 2 0 002-2v-6h-2v6H5V6h6V4H5a2 2 0 00-2 2v12a2 2 0 002 2zm14-11V5h-2v3h-3v2h3v3h2v-3h3V9h-3z"/></svg>
+  </button>
 
   <!-- MODEL VIEWER -->
   <model-viewer id="viewer"
     src="https://betdelest.github.io/Boubekri_Redouane/Villa_AR.glb"
+    alt="Modèle BETL"
     ar ar-modes="scene-viewer webxr"
-    camera-controls environment-image="neutral">
+    camera-controls
+    environment-image="neutral">
 
-    <button slot="ar-button" class="ar-button" id="arBtn">
-      Voir en Réalité Augmentée
-    </button>
+    <button slot="ar-button" class="ar-button" id="arBtn">Voir en Réalité Augmentée</button>
   </model-viewer>
 
   <!-- PROGRESS -->
-  <div class="progress-wrap">
+  <div class="progress-wrap" aria-hidden="true">
     <div class="progress"><span id="pbar"></span></div>
-    <div id="plabel">0%</div>
+    <div class="progress-label" id="plabel">0%</div>
   </div>
 
   <!-- SPLASH -->
   <div class="splash" id="splash">
-    <img src="BETL.png" class="splash-logo">
-    <div style="margin-top:10px;color:#ccc">Chargement…</div>
-    <div id="splashPct" style="color:#ccc;margin-top:5px">0%</div>
+    <img src="BETL.png" class="splash-logo" alt="BETL">
+    <div style="margin-top:10px;color:#cfcfcf">Chargement du modèle...</div>
+    <div id="splashPct" style="margin-top:6px;color:#cfcfcf">0%</div>
   </div>
 
-  <!-- MODAL PDF -->
-  <div class="modal-backdrop" id="pdfModal">
-    <div class="modal">
+  <!-- MODAL PLANS -->
+  <div id="pdfModal" class="modal-backdrop" onclick="if(event.target===this) closePlans()">
+    <div class="modal" role="dialog" aria-modal="true">
       <h3>Plans à télécharger</h3>
-
       <div id="planList"></div>
-
-      <button class="btn" onclick="closePlans()" style="margin-top:10px">Fermer</button>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn" onclick="closePlans()">Fermer</button>
+      </div>
     </div>
   </div>
 
-  <!-- PREVIEW PDF -->
-  <div class="modal-backdrop" id="previewModal">
+  <!-- PREVIEW -->
+  <div id="previewModal" class="modal-backdrop" onclick="if(event.target===this) closePreview()">
     <div class="modal">
-      <iframe id="previewFrame" class="preview-iframe"></iframe>
-      <button class="btn" onclick="closePreview()" style="margin-top:10px">Fermer</button>
+      <iframe id="previewFrame" class="preview-iframe" style="width:100%;height:72vh;border:0;background:#fff"></iframe>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn" onclick="closePreview()">Fermer</button>
+      </div>
     </div>
   </div>
 
 <script>
-/* ------------------ BASE CONFIG ------------------ */
+/* ---------- Config ---------- */
 const BASE = "https://betdelest.github.io/Boubekri_Redouane/";
+const MODEL_ARCH = "Villa_AR.glb";
+const MODEL_GC = "Villa_GC.glb";
 
 const PLANS = [
   {name:"Plan Architecture", file:"villa_Boubekri_redouane.pdf"},
   {name:"Plan Génie Civil", file:"Plans_Villa_GC.pdf"}
 ];
 
-/* ------------------ MODEL SWITCH ------------------ */
-function switchModel(filename){
-  viewer.src = BASE + filename;
+/* ---------- Helper elems ---------- */
+const viewer = document.getElementById('viewer');
+const pbar = document.getElementById('pbar');
+const plabel = document.getElementById('plabel');
+const splash = document.getElementById('splash');
+const splashPct = document.getElementById('splashPct');
+const pdfModal = document.getElementById('pdfModal');
+const planList = document.getElementById('planList');
+const previewModal = document.getElementById('previewModal');
+const previewFrame = document.getElementById('previewFrame');
+const arBtn = document.getElementById('arBtn');
+
+/* ---------- Model switching ---------- */
+function switchModel(name){
+  // name peut être un fichier relatif (dans repo) ou une clé
+  const src = BASE + (name === 'Villa_GC.glb' ? MODEL_GC : MODEL_ARCH);
+  viewer.setAttribute('src', src);
 }
 
-/* ------------------ PROGRESS + SPLASH ------------------ */
-viewer.addEventListener("progress", e=>{
-  const pct = Math.floor(e.detail.totalProgress * 100);
-  pbar.style.width = pct+"%";
-  plabel.textContent = pct+"%";
-  splashPct.textContent = pct+"%";
-
-  if(pct === 100){
-    setTimeout(()=> splash.classList.add("hidden"), 600);
+/* ---------- Progress & splash ---------- */
+viewer.addEventListener('progress', e => {
+  const pct = Math.floor((e.detail.totalProgress || 0) * 100);
+  pbar.style.width = pct + "%";
+  plabel.textContent = pct + "%";
+  splashPct.textContent = pct + "%";
+  if (pct >= 100) {
+    setTimeout(()=> {
+      splash.classList.add('hidden');
+    }, 500);
+    setTimeout(()=> { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 900);
   }
 });
 
-/* ------------------ PDF MODAL ------------------ */
+/* ---------- PDF modal (list / preview / download) ---------- */
 function openPlans(){
   planList.innerHTML = "";
   PLANS.forEach(p=>{
-    planList.innerHTML += `
-      <div class="plan-item">
-        <div>${p.name}</div>
-        <div class="plan-actions">
-          <button onclick="previewPDF('${p.file}')">Voir</button>
-          <button onclick="downloadPDF('${p.file}')">Télécharger</button>
-        </div>
+    const item = document.createElement('div');
+    item.className = 'plan-item';
+    item.innerHTML = `<div style="max-width:70%">${p.name}</div>
+      <div class="plan-actions">
+        <button onclick="previewPDF('${p.file}')">Voir</button>
+        <button onclick="downloadPDF('${p.file}')">Télécharger</button>
       </div>`;
+    planList.appendChild(item);
   });
   pdfModal.style.display = "flex";
 }
 function closePlans(){ pdfModal.style.display = "none"; }
 
-function previewPDF(f){
-  previewFrame.src = BASE + f;
+function previewPDF(file){
+  previewFrame.src = BASE + file;
   previewModal.style.display = "flex";
 }
 function closePreview(){
   previewFrame.src = "";
   previewModal.style.display = "none";
 }
-
-function downloadPDF(f){
-  window.open(BASE + f, "_blank");
+function downloadPDF(file){
+  // try fetch->blob to force download; fallback open in new tab
+  const url = BASE + file;
+  fetch(url).then(r=>{
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(blob=>{
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = file;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  }).catch(()=> {
+    window.open(url, '_blank');
+  });
 }
 
-/* ------------------ AR FALLBACK INTENT ------------------ */
-arBtn.onclick = async () => {
+/* ---------- AR button: try enterAR(), fallback intent for Chrome ---------- */
+arBtn.addEventListener('click', async (ev) => {
+  ev.preventDefault();
   try {
     await viewer.enterAR();
-  }catch(e){
-    const url = encodeURIComponent(viewer.src);
-    const intent =
-      `intent://arvr.google.com/scene-viewer/1.0?file=${url}&mode=ar_preferred` +
-      `#Intent;scheme=https;package=com.google.android.googlequicksearchbox;end`;
-
+  } catch (err) {
+    // fallback: build a scene-viewer intent for Chrome on Android
+    const modelUrl = encodeURIComponent(viewer.getAttribute('src') || (BASE + MODEL_ARCH));
+    const title = encodeURIComponent('Modèle BETL');
+    const intent = `intent://arvr.google.com/scene-viewer/1.0?file=${modelUrl}&title=${title}&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;end`;
     window.location.href = intent;
-
-    setTimeout(()=>{
-      alert("Si AR ne s'ouvre pas, utilisez Chrome Android.");
-    },800);
+    setTimeout(()=> {
+      alert("Si la réalité augmentée ne s'ouvre pas, ouvrez la page dans Chrome (Android). Pour iPhone, Quick Look nécessite un .usdz.");
+    }, 900);
   }
-};
+});
+
+/* ---------- Init: set initial model src absolute (reliable) ---------- */
+viewer.setAttribute('src', BASE + MODEL_ARCH);
+viewer.addEventListener('load', ()=> {
+  // ensure AR button visible
+  if (arBtn) arBtn.style.display = 'block';
+});
 </script>
 
 </body>
 </html>
-
