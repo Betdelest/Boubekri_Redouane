@@ -3,377 +3,233 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BETL — Visualisateur AR</title>
+  <title>BETL — Visualisation AR</title>
 
   <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
   <style>
-    :root{
-      --accent:#0a84ff; --muted:#999; --bg:#000; --card:#111; --white:#fff; --glass: rgba(255,255,255,0.06);
-    }
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:Inter,Arial,Helvetica,sans-serif}
-    /* Top */
-    .top-menu{position:absolute;top:12px;left:0;width:100%;padding:0 12px;display:flex;justify-content:space-between;align-items:center;z-index:40}
-    .left-buttons{display:flex;gap:10px;align-items:center}
-    .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--glass);color:var(--white);font-size:14px;cursor:pointer}
-    .btn.primary{background:var(--white);color:#000}
-    .logo-link{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
-    .logo-small{height:44px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
-    @media (max-width:480px){ .btn{padding:8px 10px;font-size:13px} .logo-small{height:36px} }
+    :root{--accent:#0a84ff;--muted:#aaa;--bg:#000;--white:#fff;--glass:rgba(255,255,255,0.08);}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--white);font-family:Arial,Helvetica,sans-serif}
 
-    /* model-viewer */
+    /* --- TOP MENU --- */
+    .top-menu{
+      position:absolute;top:10px;left:0;width:100%;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:0 12px;z-index:20;
+    }
+    .left-buttons{display:flex;gap:10px;align-items:center}
+    .btn{
+      padding:10px 14px;border:0;border-radius:10px;
+      background:var(--glass);color:#fff;font-size:14px;cursor:pointer;
+      backdrop-filter:blur(4px);
+    }
+    .logo-small{height:42px;border-radius:8px}
+
+    /* --- PDF ICON BUTTON --- */
+    .pdf-btn{
+      width:46px;height:46px;border-radius:12px;
+      background:#fff;border:0;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .pdf-btn svg{width:24px;height:24px;fill:#000;}
+
+    /* --- MODEL VIEWER --- */
     model-viewer{width:100vw;height:100vh;display:block}
 
-    /* slot AR button */
-    .ar-slot-btn { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); padding:14px 22px; background:#fff; color:#000; border:none; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,0.6); z-index:9999; cursor:pointer; display:block; }
+    /* --- AR BUTTON (ONLY ONE) --- */
+    .ar-button{
+      position:absolute;
+      bottom:90px; /* 🔥 Remonté */
+      left:50%;transform:translateX(-50%);
+      padding:14px 26px;background:#fff;color:#000;
+      border:none;border-radius:14px;font-size:16px;
+      font-weight:600;cursor:pointer;
+      box-shadow:0 10px 28px rgba(0,0,0,0.5);
+      z-index:9999;
+    }
 
-    /* manual fallback AR button */
-    #manualArBtn { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 99999; padding:14px 22px; background:#fff; color:#000; border:none; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,0.6); cursor:pointer; display:none; align-items:center; gap:8px; }
-    #manualArBtn.hidden { display:none; }
+    /* --- PROGRESS --- */
+    .progress-wrap{
+      position:absolute;bottom:140px;left:50%;transform:translateX(-50%);
+      display:flex;gap:10px;align-items:center;z-index:30;
+    }
+    .progress{width:240px;height:10px;background:#333;border-radius:9999px}
+    .progress > span{display:block;height:100%;width:0%;background:#0a84ff}
 
-    /* progress */
-    .progress-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:86px;z-index:30;display:flex;align-items:center;gap:12px;pointer-events:none}
-    .progress{width:240px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden}
-    .progress>span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#4bd3ff);transition:width 200ms ease}
-    .progress-label{color:var(--muted);font-size:13px;pointer-events:auto}
+    /* --- SPLASH --- */
+    .splash{
+      position:fixed;inset:0;background:#000;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:200;
+    }
+    .splash-logo{width:260px;animation:pulse 2.6s infinite ease-in-out}
+    @keyframes pulse{0%{opacity:.8}50%{opacity:1}100%{opacity:.8}}
+    .splash.hidden{opacity:0;pointer-events:none;transition:.4s}
 
-    /* modal */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:80}
-    .modal{width:min(760px,96%);max-height:86vh;background:var(--card);border-radius:12px;padding:16px;overflow:auto}
-    .filters{display:flex;gap:10px;margin:8px 0 12px 0;flex-wrap:wrap}
-    .filter-btn{padding:8px 12px;border-radius:10px;border:0;background:#222;color:#fff;cursor:pointer}
-    .filter-btn.active{background:var(--accent)}
-    .plan-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);margin-bottom:8px}
-    .plan-actions button{margin-left:8px;padding:8px 10px;border-radius:8px;border:0;background:var(--white);color:#000;cursor:pointer}
+    /* --- MODAL PDF --- */
+    .modal-backdrop{
+      display:none;position:fixed;inset:0;z-index:80;
+      background:rgba(0,0,0,.6);align-items:center;justify-content:center;
+    }
+    .modal{
+      width:min(700px,95%);background:#111;padding:16px;border-radius:10px;
+      max-height:85vh;overflow:auto;
+    }
+    .plan-item{
+      padding:12px;background:#1a1a1a;border-radius:10px;
+      margin-bottom:8px;display:flex;justify-content:space-between;
+    }
+    .plan-actions button{
+      padding:8px 10px;border-radius:8px;border:0;background:#fff;color:#000;
+      cursor:pointer;
+    }
 
-    /* preview */
-    .preview-iframe{width:90vw;height:78vh;border:0;border-radius:8px;background:#fff}
-    .preview-modal .modal{padding:10px}
-
-    /* splash */
-    .splash{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:200;transition:opacity .4s ease, transform .4s ease}
-    .splash.hidden{opacity:0;pointer-events:none;transform:scale(.98)}
-    .splash-logo{width:260px;max-width:60vw;height:auto;display:block;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.6))}
-    .splash-sub{margin-top:12px;color:var(--muted);font-size:14px}
-    .splash-percent{margin-top:8px;color:var(--muted);font-size:13px}
-    @keyframes pulse{0%{transform:scale(0.98);opacity:0.9}50%{transform:scale(1);opacity:1}100%{transform:scale(0.98);opacity:0.9}}
-    .splash-logo{animation:pulse 2.6s infinite ease-in-out}
+    /* PDF preview */
+    .preview-iframe{width:90vw;height:78vh;background:#fff;border-radius:8px;border:0}
   </style>
 </head>
+
 <body>
 
-  <!-- top menu -->
+  <!-- TOP MENU -->
   <div class="top-menu">
+
     <div class="left-buttons">
-      <a class="logo-link" href="https://www.facebook.com/BETL121" target="_blank" title="Page Facebook">
-        <img src="BETL.png" alt="BETL" class="logo-small" />
+      <a href="https://www.facebook.com/BETL121" target="_blank">
+        <img src="BETL.png" class="logo-small">
       </a>
 
-      <button class="btn" onclick="changeModel('Villa_AR.glb')">Architecture</button>
-      <button class="btn" onclick="changeModel('Villa_GC.glb')">Génie Civil</button>
+      <button class="btn" onclick="switchModel('Villa_AR.glb')">Architecture</button>
+      <button class="btn" onclick="switchModel('Villa_GC.glb')">Génie Civil</button>
     </div>
 
-    <div style="display:flex;align-items:center;gap:10px">
-      <button class="btn primary" onclick="openPlans()">Télécharger PDF</button>
-    </div>
+    <!-- PDF BUTTON (icon-only) -->
+    <button class="pdf-btn" onclick="openPlans()">
+      <svg viewBox="0 0 24 24">
+        <path d="M5 20h14a2 2 0 002-2v-6h-2v6H5V6h6V4H5a2 2 0 00-2 2v12a2 2 0 002 2zm14-11V5h-2v3h-3v2h3v3h2v-3h3V9h-3z"/>
+      </svg>
+    </button>
+
   </div>
 
-  <!-- model-viewer : src set to ABSOLUTE below via JS init for reliability -->
+  <!-- MODEL VIEWER -->
   <model-viewer id="viewer"
-    alt="Modèle 3D BETL"
-    ar
-    ar-modes="scene-viewer webxr"
-    camera-controls
-    environment-image="neutral"
-    reveal="auto"
-    exposure="1"
-    shadow-intensity="1"
-    ios-src=""
-    >
-    <button slot="ar-button" class="ar-slot-btn" id="slotArBtn">Voir en Réalité Augmentée</button>
+    src="https://betdelest.github.io/Boubekri_Redouane/Villa_AR.glb"
+    ar ar-modes="scene-viewer webxr"
+    camera-controls environment-image="neutral">
+
+    <button slot="ar-button" class="ar-button" id="arBtn">
+      Voir en Réalité Augmentée
+    </button>
   </model-viewer>
 
-  <!-- manual AR fallback button -->
-  <button id="manualArBtn" aria-label="Voir en réalité augmentée">
-    <svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px">
-      <path d="M12 2v4M12 18v4M4 12h4M16 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3" stroke="#000" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    Voir en Réalité Augmentée
-  </button>
-
-  <!-- progress -->
-  <div class="progress-wrap" aria-hidden="true">
-    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
-    <div class="progress-label" id="progressLabel">Chargement 0%</div>
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress"><span id="pbar"></span></div>
+    <div id="plabel">0%</div>
   </div>
 
-  <!-- modal plans -->
-  <div id="modalBackdrop" class="modal-backdrop" onclick="if(event.target===this) closePlans()">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="plansTitle">
-      <h3 id="plansTitle">Plans à télécharger</h3>
-      <p style="color:var(--muted);margin-top:6px">Filtrez par catégorie, prévisualisez un plan avant de le télécharger.</p>
-      <div class="filters" id="filters">
-        <button class="filter-btn active" data-cat="all" onclick="applyFilter('all')">Tous</button>
-        <button class="filter-btn" data-cat="Architecture" onclick="applyFilter('Architecture')">Architecture</button>
-        <button class="filter-btn" data-cat="GC" onclick="applyFilter('GC')">Génie Civil</button>
-        <button class="filter-btn" data-cat="Autre" onclick="applyFilter('Autre')">Autres</button>
-      </div>
-      <div id="plansList" aria-live="polite"></div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
-        <button class="btn small" onclick="closePlans()">Fermer</button>
-        <button class="btn primary small" onclick="downloadSelected()">Télécharger sélection</button>
-      </div>
+  <!-- SPLASH -->
+  <div class="splash" id="splash">
+    <img src="BETL.png" class="splash-logo">
+    <div style="margin-top:10px;color:#ccc">Chargement…</div>
+    <div id="splashPct" style="color:#ccc;margin-top:5px">0%</div>
+  </div>
+
+  <!-- MODAL PDF -->
+  <div class="modal-backdrop" id="pdfModal">
+    <div class="modal">
+      <h3>Plans à télécharger</h3>
+
+      <div id="planList"></div>
+
+      <button class="btn" onclick="closePlans()" style="margin-top:10px">Fermer</button>
     </div>
   </div>
 
-  <!-- preview -->
-  <div id="previewBackdrop" class="modal-backdrop preview-modal" onclick="if(event.target===this) closePreview()">
-    <div class="modal" style="width:min(95%,1100px);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong id="previewTitle"></strong>
-        <div><button class="btn small" onclick="closePreview()">Fermer</button></div>
-      </div>
-      <iframe id="pdfPreviewIframe" class="preview-iframe" src=""></iframe>
+  <!-- PREVIEW PDF -->
+  <div class="modal-backdrop" id="previewModal">
+    <div class="modal">
+      <iframe id="previewFrame" class="preview-iframe"></iframe>
+      <button class="btn" onclick="closePreview()" style="margin-top:10px">Fermer</button>
     </div>
-  </div>
-
-  <!-- splash -->
-  <div id="splash" class="splash" role="status" aria-live="polite">
-    <img src="BETL.png" alt="BETL" class="splash-logo" />
-    <div class="splash-sub">Chargement du modèle…</div>
-    <div class="splash-percent" id="splashPercent">0%</div>
   </div>
 
 <script>
-/* ================= CONFIG ================= */
-const SPLASH_DURATION_MS = 3000; // change to 5000 for 5s
-const BASE_URL = 'https://betdelest.github.io/Boubekri_Redouane/'; // <-- your GitHub Pages base
-const MODEL_GLBS = { arch: 'Villa_AR.glb', gc: 'Villa_GC.glb' };
-const DEFAULT_MODEL = MODEL_GLBS.arch;
+/* ------------------ BASE CONFIG ------------------ */
+const BASE = "https://betdelest.github.io/Boubekri_Redouane/";
 
 const PLANS = [
-  { id:'arch', name:'Plan Architecture - Villa', file:'villa_Boubekri_redouane.pdf', desc:'Plans architecturaux', category:'Architecture' },
-  { id:'gc', name:'Plan Génie Civil - Villa', file:'Plans_Villa_GC.pdf', desc:'Fondations, ferraillage', category:'GC' }
+  {name:"Plan Architecture", file:"villa_Boubekri_redouane.pdf"},
+  {name:"Plan Génie Civil", file:"Plans_Villa_GC.pdf"}
 ];
 
-/* ================= Splash logic ================= */
-const splash = document.getElementById('splash');
-const splashPercent = document.getElementById('splashPercent');
-let splashShownAt = performance.now();
-let modelLoadedPercent = 0;
-
-function hideSplash(force=false){
-  const elapsed = performance.now() - splashShownAt;
-  if(!force && elapsed < SPLASH_DURATION_MS){
-    setTimeout(()=> hideSplash(true), SPLASH_DURATION_MS - elapsed + 50);
-    return;
-  }
-  splash.classList.add('hidden');
-  setTimeout(()=> { if(splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 600);
+/* ------------------ MODEL SWITCH ------------------ */
+function switchModel(filename){
+  viewer.src = BASE + filename;
 }
-function tryHideSplashIfReady(){ if(modelLoadedPercent >= 80) hideSplash(); }
 
-/* ================= model-viewer init ================= */
-const viewer = document.getElementById('viewer');
-const progressBar = document.getElementById('progressBar');
-const progressLabel = document.getElementById('progressLabel');
-const slotArBtn = document.getElementById('slotArBtn');
-const manualArBtn = document.getElementById('manualArBtn');
+/* ------------------ PROGRESS + SPLASH ------------------ */
+viewer.addEventListener("progress", e=>{
+  const pct = Math.floor(e.detail.totalProgress * 100);
+  pbar.style.width = pct+"%";
+  plabel.textContent = pct+"%";
+  splashPct.textContent = pct+"%";
 
-// set absolute model src for reliability
-viewer.setAttribute('src', BASE_URL + DEFAULT_MODEL);
-// (optionally set ios-src if you add .usdz)
-viewer.setAttribute('ios-src', ''); // leave empty unless you provide .usdz
-
-viewer.addEventListener('progress', (e)=>{
-  const pct = Math.floor((e.detail.totalProgress || 0) * 100);
-  modelLoadedPercent = pct;
-  progressBar.style.width = pct + '%';
-  progressLabel.textContent = `Chargement ${pct}%`;
-  if(splash && !splash.classList.contains('hidden')) splashPercent.textContent = pct + '%';
-  if(pct >= 100){
-    progressLabel.textContent = 'Modèle chargé';
-    setTimeout(()=> { progressBar.style.width = '100%'; setTimeout(()=> { progressLabel.style.display='none'; document.querySelector('.progress').style.display='none'; },700); },200);
-    hideSplash();
-  } else {
-    progressLabel.style.display = 'block';
-    document.querySelector('.progress').style.display = 'block';
+  if(pct === 100){
+    setTimeout(()=> splash.classList.add("hidden"), 600);
   }
 });
 
-viewer.addEventListener('load', ()=>{
-  // ensure slot button visible and styled
-  if(slotArBtn){
-    slotArBtn.style.display = 'block';
-    slotArBtn.style.zIndex = 99999;
-  }
-  setTimeout(()=> showManualArBtn(), 200);
-});
-
-viewer.addEventListener('error', (e)=> { console.error('model-viewer error', e); progressLabel.textContent = 'Erreur chargement modèle'; setTimeout(()=> hideSplash(true), 1200); });
-
-// AR status handling
-viewer.addEventListener('ar-status', (ev)=>{
-  if(!manualArBtn) return;
-  if(ev.detail && ev.detail.status === 'failed'){ manualArBtn.classList.add('hidden'); manualArBtn.style.display='none'; }
-  else { showManualArBtn(); }
-});
-
-/* ================= Buttons / model switching ================= */
-function changeModel(pathKeyOrPath){
-  // support passing key (arch/gc) or full path
-  const src = MODEL_GLBS[pathKeyOrPath] ? BASE_URL + MODEL_GLBS[pathKeyOrPath] : ( /^https?:\/\//i.test(pathKeyOrPath) ? pathKeyOrPath : BASE_URL + pathKeyOrPath );
-  viewer.setAttribute('src', src);
-  progressLabel.style.display = 'block';
-  document.querySelector('.progress').style.display = 'block';
-  progressBar.style.width = '4%';
-  progressLabel.textContent = 'Chargement 0%';
-  // show splash again
-  if(!document.body.contains(splash)) document.body.appendChild(splash);
-  splash.classList.remove('hidden');
-  splashShownAt = performance.now();
-}
-
-/* ================ Plans modal ================ */
-const modalBackdrop = document.getElementById('modalBackdrop');
-const plansList = document.getElementById('plansList');
-const previewBackdrop = document.getElementById('previewBackdrop');
-const pdfPreviewIframe = document.getElementById('pdfPreviewIframe');
-const previewTitle = document.getElementById('previewTitle');
-
-let currentFilter = 'all';
-let selectedIds = new Set();
-
-function openPlans(){ renderPlans(); modalBackdrop.style.display = 'flex'; }
-function closePlans(){ modalBackdrop.style.display = 'none'; }
-function applyFilter(cat){
-  currentFilter = cat;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-  renderPlans();
-}
-
-function renderPlans(){
-  plansList.innerHTML = '';
-  const visible = PLANS.filter(p => currentFilter === 'all' || p.category === currentFilter);
-  if(visible.length === 0) { plansList.innerHTML = '<p style="color:var(--muted)">Aucun plan dans cette catégorie.</p>'; return; }
-  visible.forEach(plan=>{
-    const item = document.createElement('div'); item.className='plan-item';
-    const left = document.createElement('div'); left.style.display='flex'; left.style.gap='12px'; left.style.alignItems='center';
-    const checkbox = document.createElement('input'); checkbox.type='checkbox'; checkbox.checked = selectedIds.has(plan.id);
-    checkbox.onchange = (e)=> { if(e.target.checked) selectedIds.add(plan.id); else selectedIds.delete(plan.id); renderPlans(); };
-    const meta = document.createElement('div'); meta.className='plan-meta'; meta.innerHTML = `<strong>${plan.name}</strong><small style="color:var(--muted)">${plan.desc||''}</small>`;
-    left.appendChild(checkbox); left.appendChild(meta);
-    const actions = document.createElement('div'); actions.className='plan-actions';
-    const viewBtn = document.createElement('button'); viewBtn.textContent='Voir'; viewBtn.onclick = ()=> previewPDF(plan);
-    const dlBtn = document.createElement('button'); dlBtn.textContent='Télécharger'; dlBtn.onclick = ()=> downloadPDF(plan.file);
-    actions.appendChild(viewBtn); actions.appendChild(dlBtn);
-    item.appendChild(left); item.appendChild(actions);
-    plansList.appendChild(item);
+/* ------------------ PDF MODAL ------------------ */
+function openPlans(){
+  planList.innerHTML = "";
+  PLANS.forEach(p=>{
+    planList.innerHTML += `
+      <div class="plan-item">
+        <div>${p.name}</div>
+        <div class="plan-actions">
+          <button onclick="previewPDF('${p.file}')">Voir</button>
+          <button onclick="downloadPDF('${p.file}')">Télécharger</button>
+        </div>
+      </div>`;
   });
+  pdfModal.style.display = "flex";
+}
+function closePlans(){ pdfModal.style.display = "none"; }
+
+function previewPDF(f){
+  previewFrame.src = BASE + f;
+  previewModal.style.display = "flex";
+}
+function closePreview(){
+  previewFrame.src = "";
+  previewModal.style.display = "none";
 }
 
-/* ================ Preview PDF ================ */
-function previewPDF(plan){
-  const url = resolvePDF(plan.file);
-  previewTitle.textContent = plan.name;
-  pdfPreviewIframe.src = url;
-  previewBackdrop.style.display = 'flex';
-}
-function closePreview(){ pdfPreviewIframe.src=''; previewBackdrop.style.display='none'; }
-
-/* ================ Resolve & download PDF ================ */
-function resolvePDF(path){
-  if(!path) return '';
-  if(/^https?:\/\//i.test(path)) return encodeURI(path);
-  return BASE_URL + encodeURI(path);
+function downloadPDF(f){
+  window.open(BASE + f, "_blank");
 }
 
-async function downloadPDF(path){
-  const final = resolvePDF(path);
-  try{
-    const resp = await fetch(final, { method:'GET', mode:'cors' });
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
-    const blob = await resp.blob();
-    let filename = 'document.pdf';
-    const cd = resp.headers.get('Content-Disposition');
-    if(cd){
-      const m = /filename\*?=([^;]+)/i.exec(cd);
-      if(m && m[1]) filename = m[1].replace(/['"]/g,'');
-    } else {
-      const parts = final.split('/'); filename = parts[parts.length-1] || filename;
-    }
-    filename = decodeURIComponent(filename).replace(/%20/g,'_');
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  }catch(err){
-    console.warn('downloadPDF fallback - reason:', err);
-    window.open(final, '_blank');
-  }
-}
-function downloadSelected(){
-  if(selectedIds.size === 0) { alert('Aucun plan sélectionné.'); return; }
-  const toDownload = PLANS.filter(p => selectedIds.has(p.id));
-  const delay = 650;
-  toDownload.forEach((p, idx) => setTimeout(()=> downloadPDF(p.file), idx * delay));
-}
-
-/* ================ AR fallback & intent (Chrome) ================ */
-function showManualArBtn(){
-  if(!manualArBtn) return;
-  manualArBtn.style.display = 'inline-flex';
-  manualArBtn.classList.remove('hidden');
-  if(!manualArBtn._clickSet){
-    manualArBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await tryEnterARWithFallback();
-    });
-    manualArBtn._clickSet = true;
-  }
-}
-
-async function tryEnterARWithFallback(){
+/* ------------------ AR FALLBACK INTENT ------------------ */
+arBtn.onclick = async () => {
   try {
     await viewer.enterAR();
-    return;
-  } catch(err){
-    console.warn('enterAR failed:', err);
-    // Fallback: build Scene Viewer intent for Chrome/Google app
-    const modelUrl = viewer.getAttribute('src') || (BASE_URL + DEFAULT_MODEL);
-    const m = encodeURIComponent(modelUrl);
-    const title = encodeURIComponent('Modèle BETL');
-    const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${m}&title=${title}&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;end`;
-    // Redirect to intent (Android will handle)
-    try {
-      window.location.href = intentUrl;
-      // show message if nothing happens
-      setTimeout(()=> {
-        alert('Si la réalité augmentée ne s\'ouvre pas automatiquement, essayez d’ouvrir cette page dans Chrome (Android). Pour iPhone, il faut fournir un .usdz et ouvrir avec Safari.');
-      },1000);
-    } catch(e){
-      alert('La réalité augmentée n’est pas disponible sur cet appareil / navigateur.');
-    }
-  }
-}
+  }catch(e){
+    const url = encodeURIComponent(viewer.src);
+    const intent =
+      `intent://arvr.google.com/scene-viewer/1.0?file=${url}&mode=ar_preferred` +
+      `#Intent;scheme=https;package=com.google.android.googlequicksearchbox;end`;
 
-/* ================ Force internal slot style (backup) ================ */
-setTimeout(()=> {
-  const innerAr = document.getElementById('slotArBtn');
-  if(innerAr){
-    innerAr.style.zIndex = 99999;
-    innerAr.style.display = 'block';
-    innerAr.style.position = 'absolute';
-    innerAr.style.bottom = '18px';
-    innerAr.style.left = '50%';
-    innerAr.style.transform = 'translateX(-50%)';
-  }
-},300);
+    window.location.href = intent;
 
-/* ================ Init ================ */
-splashShownAt = performance.now();
-setTimeout(()=> tryHideSplashIfReady(), 1000);
-renderPlans();
+    setTimeout(()=>{
+      alert("Si AR ne s'ouvre pas, utilisez Chrome Android.");
+    },800);
+  }
+};
 </script>
+
 </body>
 </html>
