@@ -3,140 +3,296 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AR Switch Models + Loader</title>
+  <title>BETL AR Viewer + QR Loader</title>
+
+  <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <!-- jsQR -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
   <style>
-    body {
-      margin: 0;
-      background: #000;
+    body { margin:0; background:#000; color:#fff; font-family:Arial }
+    model-viewer { width:100vw; height:100vh; }
+
+    .topbar {
+      position:absolute; top:10px; left:50%;
+      transform:translateX(-50%);
+      display:flex; gap:8px; z-index:20;
     }
-    model-viewer {
-      width: 100vw;
-      height: 100vh;
+
+    .topbar button {
+      padding:8px 12px; border-radius:8px;
+      border:0; background:#fff; color:#000;
+      cursor:pointer;
     }
-    .switch-buttons {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 2;
+
+    #messages {
+      position:absolute; bottom:70px; left:50%;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,0.6);
+      padding:10px 16px; border-radius:8px;
+      display:none; z-index:30;
     }
-    .switch-buttons button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background-color: #fff;
-      font-size: 14px;
-      cursor: pointer;
+
+    #messages.error { color:#ff6b6b; }
+
+    #loadingBar {
+      position:absolute; bottom:120px; left:50%;
+      transform:translateX(-50%);
+      background:rgba(255,255,255,0.1);
+      padding:6px; border-radius:8px;
+      width:200px; display:none; z-index:30;
     }
+    #loadingBar div {
+      height:8px; width:0%; background:#fff;
+      border-radius:6px;
+    }
+
     .ar-button {
-      position: absolute;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 24px;
-      background: #fff;
-      border-radius: 6px;
-      font-size: 16px;
-      z-index: 1;
+      position:absolute; bottom:20px; left:50%;
+      transform:translateX(-50%);
+      padding:12px 20px; border-radius:8px;
+      border:0; background:#fff; color:#000;
+      z-index:20;
     }
-    #loadingText, #successMessage {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      color: white;
-      font-size: 14px;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 10px 20px;
-      border-radius: 10px;
-      z-index: 2;
+
+    /* QR Scanner */
+    #qrScanner {
+      position:absolute; top:10px; right:10px;
+      width:200px; background:rgba(0,0,0,0.7);
+      padding:8px; border-radius:10px;
+      display:none; z-index:40;
     }
-    #loadingText {
-      bottom: 120px; /* affiché en bas */
-      display: none;
+
+    #qrPreview {
+      width:100%; height:110px;
+      background:#111; border-radius:8px;
+      margin-bottom:8px;
     }
-    #successMessage {
-      bottom: 60px;
-      color: #0f0;
-      display: none;
-    }
-    .logo {
-      position: absolute;
-      top: 70px;
-      left: 10px;
-      width: 70px;
-      z-index: 3;
-      cursor: pointer;
+
+    #qrScanner button {
+      width:48%; padding:6px;
+      font-size:12px; border-radius:6px;
+      border:0; cursor:pointer;
     }
   </style>
 </head>
 <body>
 
-  <!-- Logo cliquable vers la page Facebook -->
-  <a href="https://www.facebook.com/BETL121" target="_blank">
-    <img src="BETL.png" alt="Logo Bureau" class="logo" />
-  </a>
+<div class="topbar">
+  <button onclick="loadModel('Villa_AR')">Architecture</button>
+  <button onclick="loadModel('Villa_GC')">Génie Civil</button>
+  <button onclick="loadURL()">Charger URL</button>
+  <button onclick="startScanner()">Scanner QR</button>
+</div>
 
-  <div class="switch-buttons">
-    <button onclick="changeModel('Villa_AR.glb')">Architecture</button>
-    <button onclick="changeModel('Villa_GC.glb')">Génie Civil</button>
+<div id="messages"></div>
+
+<div id="loadingBar"><div id="loadingProgress"></div></div>
+
+<!-- ================== QR SCANNER ================== -->
+<div id="qrScanner">
+  <video id="video" autoplay playsinline style="display:none"></video>
+  <canvas id="qrPreview"></canvas>
+
+  <div style="display:flex; justify-content:space-between; margin-top:6px;">
+    <button onclick="stopScanner()">Stop</button>
+    <button onclick="toggleCamera()">Caméra</button>
   </div>
+</div>
 
-  <div id="loadingText">Chargement... 0%</div>
-  <div id="successMessage">✅ Modèle chargé avec succès</div>
+<!-- ================== MODEL VIEWER ================== -->
+<model-viewer id="viewer"
+  src=""
+  ar
+  ar-modes="scene-viewer webxr"
+  camera-controls
+  shadow-intensity="1"
+  environment-image="neutral"
+  reveal="auto">
 
-  <model-viewer 
-    id="modelViewer"
-    src="Villa_AR"
-    ar
-    ar-modes="scene-viewer webxr"
-    camera-controls
-    shadow-intensity="1"
-    disable-zoom="false"
-    scale="0.01 0.01 0.01"
-    environment-image="neutral"
-    alt="Modèle 3D AR"
-    loading="eager"
-    reveal="auto"
-  >
-    <button slot="ar-button" class="ar-button">Voir en Réalité Augmentée</button>
-  </model-viewer>
+  <button slot="ar-button" class="ar-button">Voir en AR</button>
+</model-viewer>
 
-  <script>
-    const viewer = document.getElementById('modelViewer');
-    const loadingText = document.getElementById('loadingText');
-    const successMessage = document.getElementById('successMessage');
+<script>
+/* ==========================================================
+   CONFIGURATION MODELES - Ton username GitHub
+   ========================================================== */
 
-    function showSuccessMessage() {
-      successMessage.style.display = 'block';
-      setTimeout(() => {
-        successMessage.style.display = 'none';
-      }, 2000);
-    }
+const KNOWN_MODELS = {
+  "Villa_AR": "ghpages:betdelest/betl-models/models/Villa_AR.glb",
+  "Villa_GC": "ghpages:betdelest/betl-models/models/Villa_GC.glb"
+};
 
-    viewer.addEventListener('progress', (event) => {
-      const progress = Math.floor(event.detail.totalProgress * 100);
-      loadingText.textContent = `Chargement... ${progress}%`;
-      loadingText.style.display = 'block';
 
-      // Si chargé à 100%, masquer après un petit délai
-      if (progress === 100) {
-        setTimeout(() => {
-          loadingText.style.display = 'none';
-          showSuccessMessage();
-        }, 500);
-      }
-    });
+/* ==========================================================
+   UTILITAIRE : afficher messages
+   ========================================================== */
+const msg = document.getElementById("messages");
+function showMessage(t, type="info", timeout=3000) {
+  msg.textContent = t;
+  msg.style.display = "block";
+  msg.className = type==="error" ? "error" : "";
+  setTimeout(()=> msg.style.display="none", timeout);
+}
 
-    function changeModel(path) {
-      viewer.src = path;
-      loadingText.textContent = 'Chargement... 0%';
-      loadingText.style.display = 'block';
-      successMessage.style.display = 'none';
-    }
-  </script>
+
+/* ==========================================================
+   LOADING BAR
+   ========================================================== */
+const loadingBar = document.getElementById("loadingBar");
+const loadingProgress = document.getElementById("loadingProgress");
+
+function setProgress(p) {
+  loadingBar.style.display = p<100 ? "block" : "none";
+  loadingProgress.style.width = p+"%";
+}
+
+
+/* ==========================================================
+   RESOLVE URL (GitHub + GH Pages + URL + noms simples)
+   ========================================================== */
+function resolveModel(input) {
+  if (KNOWN_MODELS[input]) input = KNOWN_MODELS[input];
+
+  // GitHub Pages
+  if (input.startsWith("ghpages:")) {
+    const parts = input.replace("ghpages:","").split("/");
+    const user = parts.shift();
+    const repo = parts.shift();
+    const path = parts.join("/");
+    return `https://${user}.github.io/${repo}/${path}`;
+  }
+
+  // raw GitHub
+  if (input.startsWith("gh:")) {
+    const clean = input.replace("gh:","");
+    const [userRepo, branchPath] = clean.split(":");
+    const [user, repo] = userRepo.split("/");
+    const branch = branchPath.split("/")[0];
+    const filePath = branchPath.replace(branch+"/","");
+    return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${filePath}`;
+  }
+
+  // si URL directe
+  if (/^https?:\/\//.test(input)) return input;
+
+  // si pas d'extension, ajouter .glb
+  if (!input.endsWith(".glb")) return input+".glb";
+
+  return input;
+}
+
+
+/* ==========================================================
+   CHARGEMENT DU MODELE
+   ========================================================== */
+const viewer = document.getElementById("viewer");
+
+viewer.addEventListener("progress", (e)=>{
+  const p = Math.floor(e.detail.totalProgress * 100);
+  setProgress(p);
+});
+
+viewer.addEventListener("error", ()=> {
+  showMessage("Erreur au chargement du modèle", "error");
+});
+
+async function loadModel(name) {
+  const url = resolveModel(name);
+  viewer.src = url;
+  showMessage("Chargement du modèle...");
+}
+
+function loadURL() {
+  const url = prompt("URL du modèle .glb :");
+  if (url) loadModel(url);
+}
+
+
+/* ==========================================================
+   QR SCANNER
+   ========================================================== */
+let stream = null;
+let scanning = false;
+let facingMode = "environment";
+let scanRAF = null;
+
+const qrBox = document.getElementById("qrScanner");
+const video = document.getElementById("video");
+const canvas = document.getElementById("qrPreview");
+const ctx = canvas.getContext("2d");
+
+async function startScanner() {
+  qrBox.style.display = "block";
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode }
+  });
+
+  video.srcObject = stream;
+  await video.play();
+
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  scanning = true;
+  scanLoop();
+}
+
+function toggleCamera() {
+  facingMode = (facingMode === "environment") ? "user" : "environment";
+  stopScanner().then(startScanner);
+}
+
+async function stopScanner() {
+  scanning = false;
+  cancelAnimationFrame(scanRAF);
+
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t=>t.stop());
+  }
+
+  qrBox.style.display = "none";
+}
+
+function scanLoop() {
+  if (!scanning) return;
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const data = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const code = jsQR(data.data, data.width, data.height);
+
+  if (code) {
+    ctx.strokeStyle = "#0F0";
+    ctx.lineWidth = 3;
+    const loc = code.location;
+    ctx.beginPath();
+    ctx.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+    ctx.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+    ctx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+    ctx.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
+    ctx.closePath();
+    ctx.stroke();
+
+    handleQR(code.data);
+    stopScanner();
+    return;
+  }
+
+  scanRAF = requestAnimationFrame(scanLoop);
+}
+
+function handleQR(data) {
+  showMessage("QR détecté : "+data, "info", 2000);
+
+  let value = data.trim();
+  if (value.startsWith("MODEL:")) value = value.replace("MODEL:","");
+  if (value.startsWith("URL:")) value = value.replace("URL:","");
+
+  loadModel(value);
+}
+</script>
 
 </body>
 </html>
