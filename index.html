@@ -35,8 +35,8 @@
     /* model-viewer fullscreen */
     model-viewer{width:100vw;height:100vh;display:block}
 
-    /* AR button - always on top, bottom center */
-    .ar-button{
+    /* AR button inside model-viewer (slot) */
+    .ar-button {
       position:absolute;
       bottom:18px;
       left:50%;
@@ -53,6 +53,28 @@
       cursor:pointer;
       display:block;
     }
+
+    /* External AR fallback button styling (also used by script) */
+    #manualArBtn {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99999;
+      padding: 14px 22px;
+      background: #ffffff;
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #manualArBtn.hidden { display: none; }
 
     /* Progress bar */
     .progress-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:86px;z-index:30;display:flex;align-items:center;gap:12px;pointer-events:none}
@@ -127,9 +149,17 @@
     reveal="auto"
     exposure="1"
     shadow-intensity="1">
-    <!-- AR button slot (we ensure it's always visible with script) -->
-    <button slot="ar-button" class="ar-button" id="arBtn">Voir en Réalité Augmentée</button>
+    <!-- AR button slot (we still style it and also provide external fallback) -->
+    <button slot="ar-button" class="ar-button" id="slotArBtn">Voir en Réalité Augmentée</button>
   </model-viewer>
+
+  <!-- External manual AR button (fallback/guarantee) -->
+  <button id="manualArBtn" aria-label="Voir en réalité augmentée" style="display:none;">
+    <svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">
+      <path d="M12 2v4M12 18v4M4 12h4M16 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3" stroke="#000" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Voir en Réalité Augmentée
+  </button>
 
   <!-- Progress indicator -->
   <div class="progress-wrap" aria-hidden="true">
@@ -181,7 +211,7 @@
 
 <script>
 /* ============== CONFIG ================ */
-const SPLASH_DURATION_MS = 3000; // ms
+const SPLASH_DURATION_MS = 3000; // ms — change to 5000 for 5s
 const PLANS = [
   { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)', category: 'Architecture' },
   { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul', category: 'GC' },
@@ -232,9 +262,14 @@ viewer.addEventListener('progress', (e) => {
 });
 
 viewer.addEventListener('load', () => {
-  // ensure AR button visible after successful load
-  const arBtn = document.getElementById('arBtn');
-  if (arBtn) arBtn.style.display = 'block';
+  // try to show internal AR slot button
+  const slotBtn = document.getElementById('slotArBtn');
+  if (slotBtn) {
+    slotBtn.style.display = 'block';
+    slotBtn.style.zIndex = 99999;
+  }
+  // ensure external AR button visible (if supported)
+  setTimeout(()=> manualArBtnShow(), 200);
 });
 
 viewer.addEventListener('error', (e) => {
@@ -243,13 +278,17 @@ viewer.addEventListener('error', (e) => {
   setTimeout(()=> hideSplash(true), 1200);
 });
 
-/* Add ar-status listener to hide button if AR is not possible on device */
 viewer.addEventListener('ar-status', (ev) => {
-  const btn = document.getElementById('arBtn');
+  // hide or show external button based on status
+  const btn = document.getElementById('manualArBtn');
   if (!btn) return;
-  // if status failed, hide; if ready, show
-  if (ev.detail && ev.detail.status === 'failed') btn.style.display = 'none';
-  else btn.style.display = 'block';
+  if (ev.detail && ev.detail.status === 'failed') {
+    btn.classList.add('hidden');
+    btn.style.display = 'none';
+  } else {
+    btn.classList.remove('hidden');
+    btn.style.display = 'inline-flex';
+  }
 });
 
 /* ============== Buttons & switching ============== */
@@ -303,7 +342,7 @@ function renderPlans() {
   });
 }
 
-/* Preview PDF */
+/* Preview */
 function previewPDF(plan){
   const url = resolvePDF(plan.file);
   previewTitle.textContent = plan.name;
@@ -316,6 +355,8 @@ function closePreview(){ pdfPreviewIframe.src = ''; previewBackdrop.style.displa
 function resolvePDF(path) {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return encodeURI(path);
+  // If you want absolute GitHub Pages URL, replace next line with:
+  // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
   return encodeURI(path);
 }
 
@@ -349,6 +390,69 @@ function downloadSelected() {
   const delay = 650;
   toDownload.forEach((p, idx) => setTimeout(()=> downloadPDF(p.file), idx * delay));
 }
+
+/* ============== AR manual fallback & patch (force visibility) ============== */
+(function(){
+  const manualBtn = document.getElementById('manualArBtn');
+
+  function manualArClickHandler(ev) {
+    ev.preventDefault();
+    viewer.enterAR().catch(err => {
+      console.warn('enterAR failed:', err);
+      alert('La réalité augmentée n’est pas disponible sur cet appareil / navigateur.\nConseil : utilisez Chrome sur Android, ou Safari iOS avec .usdz disponible.');
+    });
+  }
+
+  // show manual button when model loaded or ar-status ready
+  function manualArBtnShow() {
+    if (!manualBtn) return;
+    manualBtn.style.display = 'inline-flex';
+    manualBtn.classList.remove('hidden');
+    if (!manualBtn.onclickSet) {
+      manualBtn.addEventListener('click', manualArClickHandler);
+      manualBtn.onclickSet = true;
+    }
+  }
+
+  // attach initial, but hidden until model ready
+  if (manualBtn) {
+    manualBtn.style.display = 'none';
+    // try to show after small delay (in case model-viewer hides it)
+    setTimeout(() => manualArBtnShow(), 400);
+  }
+
+  // Force style for internal slot button as backup
+  setTimeout(() => {
+    const innerAr = document.querySelector('#slotArBtn');
+    if (innerAr) {
+      innerAr.style.zIndex = 99999;
+      innerAr.style.display = 'block';
+      innerAr.style.position = 'absolute';
+      innerAr.style.bottom = '18px';
+      innerAr.style.left = '50%';
+      innerAr.style.transform = 'translateX(-50%)';
+    }
+  }, 300);
+
+  // Listen to ar-status events to hide manual button on failure
+  viewer.addEventListener('ar-status', (ev) => {
+    if (!manualBtn) return;
+    if (ev.detail && ev.detail.status === 'failed') {
+      manualBtn.classList.add('hidden');
+      manualBtn.style.display = 'none';
+    } else {
+      manualArBtnShow();
+    }
+  });
+
+  // When model loads, ensure manual button visible
+  viewer.addEventListener('load', () => {
+    setTimeout(() => manualArBtnShow(), 200);
+  });
+
+  // Safety: always make manual button visible initially (user may still click and get friendly error)
+  setTimeout(() => manualArBtnShow(), 800);
+})();
 
 /* ============== Init ============== */
 splashShownAt = performance.now();
