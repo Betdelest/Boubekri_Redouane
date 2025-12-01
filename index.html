@@ -1,167 +1,152 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AR Switch Models + Plans - BETL</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BETL — Visualisateur AR</title>
+
+  <!-- model-viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
   <style>
-    body { margin: 0; background: #000; font-family: Arial, Helvetica, sans-serif; color:#fff }
-    model-viewer { width: 100vw; height: 100vh; }
-
-    .switch-buttons {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 2;
+    :root{
+      --accent:#0a84ff;
+      --muted:#999;
+      --bg:#000;
+      --card:#111;
+      --white:#fff;
+      --glass: rgba(255,255,255,0.06);
     }
-    .switch-buttons button { padding: 10px 16px; border: none; border-radius: 8px; background-color: #fff; font-size: 14px; cursor: pointer; color:#000 }
-
-    .download-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 10px 14px;
-      border: none;
-      border-radius: 8px;
-      background-color: #fff;
-      color: #000;
-      font-size: 14px;
-      cursor: pointer;
-      z-index: 3;
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+    /* ---------- Top menu responsive ---------- */
+    .top-menu{position:absolute;top:12px;left:0;width:100%;padding:0 12px;display:flex;justify-content:space-between;align-items:center;z-index:40;box-sizing:border-box}
+    .left-buttons{display:flex;gap:10px}
+    .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--glass);color:var(--white);font-size:14px;cursor:pointer;backdrop-filter: blur(4px)}
+    .btn.primary{background:var(--white);color:#000}
+    .btn.icon{display:inline-flex;gap:8px;align-items:center}
+    .btn.small{padding:8px 10px;font-size:13px}
+    .logo-small{height:40px;width:auto;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+    @media (max-width:480px){
+      .btn{padding:8px 10px;font-size:13px;border-radius:8px}
+      .logo-small{height:36px}
     }
 
-    .ar-button {
-      position: absolute;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 24px;
-      background: #fff;
-      border-radius: 6px;
-      font-size: 16px;
-      z-index: 1;
-      color:#000;
+    /* ---------- model-viewer full-screen ---------- */
+    model-viewer{width:100vw;height:100vh;display:block}
+
+    /* ---------- AR button styling (model-viewer slot) ---------- */
+    .ar-button{
+      position:absolute;left:50%;transform:translateX(-50%);
+      bottom:18px;padding:14px 20px;border-radius:12px;background:rgba(255,255,255,0.95);color:#000;border:0;font-weight:600;z-index:30;
+      box-shadow:0 8px 24px rgba(0,0,0,0.6);
     }
 
-    #loadingText, #successMessage {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      color: white;
-      font-size: 14px;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 10px 20px;
-      border-radius: 10px;
-      z-index: 2;
-    }
-    #loadingText { bottom: 120px; display: none; }
-    #successMessage { bottom: 60px; color: #0f0; display: none; }
+    /* ---------- Progress bar ---------- */
+    .progress-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:86px;z-index:30;display:flex;align-items:center;gap:12px;pointer-events:none}
+    .progress{width:240px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden}
+    .progress > span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#4bd3ff);transition:width 200ms ease}
+    .progress-label{color:var(--muted);font-size:13px;pointer-events:auto}
 
-    .logo {
-      position: absolute;
-      top: 70px;
-      left: 10px;
-      width: 70px;
-      z-index: 3;
-      cursor: pointer;
-    }
-
-    /* Modal (liste de plans) */
-    .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      display: none; align-items: center; justify-content: center; z-index: 1000;
-    }
-    .modal {
-      width: min(700px, 95%); max-height: 85vh; overflow: auto;
-      background: #111; border-radius: 10px; padding: 16px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.7); color: #fff;
-    }
-    .modal h3 { margin: 0 0 8px 0; font-size:18px; }
-    .filters { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
-    .filter-btn { padding:6px 10px; border-radius:8px; border:0; cursor:pointer; background:#222; color:#fff }
-    .filter-btn.active { background:#0a84ff }
-
-    .plan-item {
-      display:flex; gap:10px; align-items:center; justify-content:space-between;
-      padding:10px; border-radius:8px; background: rgba(255,255,255,0.02);
-      margin-bottom:8px;
-    }
-    .plan-left { display:flex; gap:10px; align-items:center; }
-    .plan-icon { width:44px; height:44px; background:#222; border-radius:6px; display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff }
-    .plan-meta { font-size:14px; }
-    .plan-meta small { display:block; color:#aaa; font-size:12px; }
-    .plan-actions { display:flex; gap:8px; align-items:center; }
-    .plan-actions button { padding:8px 10px; border-radius:8px; border:0; cursor:pointer; font-size:13px; background:#fff; color:#000 }
-    .modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
-
-    .close-btn { background:#444; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
-    .download-selected { background:#0a84ff; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    /* ---------- Modal / Plans ---------- */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:80}
+    .modal{width:min(760px,96%);max-height:86vh;background:var(--card);border-radius:12px;padding:16px;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,0.7)}
+    .filters{display:flex;gap:10px;margin:8px 0 12px 0;flex-wrap:wrap}
+    .filter-btn{padding:8px 12px;border-radius:10px;border:0;background:#222;color:#fff;cursor:pointer}
+    .filter-btn.active{background:var(--accent)}
+    .plan-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);margin-bottom:8px}
+    .plan-meta strong{display:block}
+    .plan-actions button{margin-left:8px;padding:8px 10px;border-radius:8px;border:0;background:var(--white);color:#000;cursor:pointer}
 
     /* Preview modal */
-    .preview-iframe { width:90vw; height:80vh; border:0; background:#fff; border-radius:6px; }
-    .preview-modal .modal { padding:8px; }
-    @media (max-width:480px){
-      .plan-meta { font-size:13px; }
-      .plan-icon{ width:40px; height:40px; }
-      .preview-iframe{ width:95vw; height:70vh; }
+    .preview-iframe{width:90vw;height:78vh;border:0;border-radius:8px;background:#fff}
+    .preview-modal .modal{padding:10px}
+
+    /* ---------- Splash screen ---------- */
+    .splash{
+      position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:200;
+      transition:opacity .4s ease, transform .4s ease;
     }
+    .splash.hidden{opacity:0;pointer-events:none;transform:scale(.98)}
+    .splash-logo{width:260px;max-width:60vw;height:auto;display:block;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.6))}
+    .splash-sub{margin-top:12px;color:var(--muted);font-size:14px}
+
+    /* small intro animation */
+    @keyframes pulse {
+      0%{transform:scale(0.98);opacity:0.9}
+      50%{transform:scale(1);opacity:1}
+      100%{transform:scale(0.98);opacity:0.9}
+    }
+    .splash-logo{animation:pulse 2.6s infinite ease-in-out}
+
+    /* ---------- utilities ---------- */
+    .hidden{display:none}
+    a.no-dec{color:inherit;text-decoration:none}
   </style>
 </head>
 <body>
 
-  <!-- Logo cliquable vers la page Facebook -->
-  <a href="https://www.facebook.com/BETL121" target="_blank">
-    <img src="BETL.png" alt="Logo Bureau" class="logo" />
-  </a>
+  <!-- Top menu with left buttons and right pdf -->
+  <div class="top-menu">
+    <div class="left-buttons">
+      <button class="btn" onclick="changeModel('Villa_AR.glb')">
+        <!-- small architecture icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><path d="M12 3l9 6v9a1 1 0 0 1-1 1h-4v-6H8v6H4a1 1 0 0 1-1-1V9l9-6z" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Architecture
+      </button>
 
-  <div class="switch-buttons">
-    <button onclick="changeModel('Villa_AR.glb')">Architecture</button>
-    <button onclick="changeModel('Villa_GC.glb')">Génie Civil</button>
+      <button class="btn" onclick="changeModel('Villa_GC.glb')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><path d="M3 21h18" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M6 3v18" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M18 3v18" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Génie Civil
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="BETL.png" alt="BETL" class="logo-small" />
+      <button class="btn primary icon" onclick="openPlans()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M21 15v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5 5 5-5" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Télécharger PDF
+      </button>
+    </div>
   </div>
 
-  <button class="download-btn" onclick="openPlans()">📄 Télécharger PDF</button>
-
-  <div id="loadingText">Chargement... 0%</div>
-  <div id="successMessage">✅ Modèle chargé avec succès</div>
-
-  <model-viewer id="modelViewer"
+  <!-- Model viewer -->
+  <model-viewer id="viewer"
     src="Villa_AR.glb"
+    alt="Modèle 3D BETL"
     ar
     ar-modes="scene-viewer webxr"
     camera-controls
-    shadow-intensity="1"
-    disable-zoom="false"
-    scale="0.01 0.01 0.01"
     environment-image="neutral"
-    alt="Modèle 3D AR"
-    loading="eager"
-    reveal="auto">
+    reveal="auto"
+    exposure="1"
+    shadow-intensity="1">
     <button slot="ar-button" class="ar-button">Voir en Réalité Augmentée</button>
   </model-viewer>
 
-  <!-- Modal liste plans -->
+  <!-- Progress indicator -->
+  <div class="progress-wrap" aria-hidden="true">
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
+    <div class="progress-label" id="progressLabel">Chargement 0%</div>
+  </div>
+
+  <!-- Modal: Plans list -->
   <div id="modalBackdrop" class="modal-backdrop" onclick="if(event.target===this) closePlans()">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="plansTitle">
       <h3 id="plansTitle">Plans à télécharger</h3>
-      <p style="color:#bbb; margin-top:6px">Filtrez par catégorie, visualisez un plan ou sélectionnez plusieurs éléments pour les télécharger.</p>
+      <p style="color:var(--muted); margin-top:6px">Filtrez par catégorie, prévisualisez un plan avant de le télécharger.</p>
 
       <div class="filters" id="filters">
         <button class="filter-btn active" data-cat="all" onclick="applyFilter('all')">Tous</button>
         <button class="filter-btn" data-cat="Architecture" onclick="applyFilter('Architecture')">Architecture</button>
         <button class="filter-btn" data-cat="GC" onclick="applyFilter('GC')">Génie Civil</button>
-        <button class="filter-btn" data-cat="Autre" onclick="applyFilter('Autre')">Autre</button>
+        <button class="filter-btn" data-cat="Autre" onclick="applyFilter('Autre')">Autres</button>
       </div>
 
-      <div id="plansList"></div>
+      <div id="plansList" aria-live="polite"></div>
 
-      <div class="modal-footer">
-        <button class="close-btn" onclick="closePlans()">Fermer</button>
-        <button class="download-selected" onclick="downloadSelected()">Télécharger sélection</button>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="btn small" onclick="closePlans()">Fermer</button>
+        <button class="btn primary small" onclick="downloadSelected()">Télécharger sélection</button>
       </div>
     </div>
   </div>
@@ -172,217 +157,216 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <strong id="previewTitle"></strong>
         <div>
-          <button class="close-btn" onclick="closePreview()">Fermer</button>
+          <button class="btn small" onclick="closePreview()">Fermer</button>
         </div>
       </div>
       <iframe id="pdfPreviewIframe" class="preview-iframe" src=""></iframe>
     </div>
   </div>
 
+  <!-- Splash screen -->
+  <div id="splash" class="splash" role="status" aria-live="polite">
+    <img src="BETL.png" alt="BETL" class="splash-logo" />
+    <div class="splash-sub">Chargement du modèle…</div>
+  </div>
+
 <script>
-  /* ------------- CONFIG : liste des plans -------------
-     Ajoute ou modifie ici les éléments.
-     Chaque plan a : id, name, file, desc, category (Architecture | GC | Autre)
-  -----------------------------------------------------*/
-  const PLANS = [
-    { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)', category: 'Architecture' },
-    { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul', category: 'GC' },
-    // ex: { id:'elec', name:'Plan Electricité', file:'Plans_Electricite.pdf', desc:'Schéma electrique', category:'Autre' }
-  ];
+/* ============== CONFIG ================
+   - SPLASH_DURATION_MS : durée minimale du splash (ms)
+   - change PLANS[] et filenames si nécessaire
+   - si tu héberges PDFs sur GitHub Pages, remplace resolvePDF accordingly
+========================================*/
+const SPLASH_DURATION_MS = 3000; // 3000 = 3s ; tu peux mettre 5000 pour 5s
 
-  // Elements
-  const modalBackdrop = document.getElementById('modalBackdrop');
-  const plansList = document.getElementById('plansList');
-  const previewBackdrop = document.getElementById('previewBackdrop');
-  const pdfPreviewIframe = document.getElementById('pdfPreviewIframe');
-  const previewTitle = document.getElementById('previewTitle');
+const PLANS = [
+  { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)', category: 'Architecture' },
+  { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul', category: 'GC' },
+  // ajoute d'autres éléments si besoin
+];
 
-  // état du filtre et sélection
-  let currentFilter = 'all';
-  let selectedIds = new Set();
+/* ============== Splash logic ============== */
+const splash = document.getElementById('splash');
+let splashShownAt = performance.now();
+let modelLoadedPercent = 0;
 
-  function openPlans() {
-    renderPlans();
-    modalBackdrop.style.display = 'flex';
+function hideSplash(force=false) {
+  const elapsed = performance.now() - splashShownAt;
+  if (!force && elapsed < SPLASH_DURATION_MS) {
+    // attendre la durée minimale
+    setTimeout(() => hideSplash(true), SPLASH_DURATION_MS - elapsed + 50);
+    return;
   }
-  function closePlans() {
-    modalBackdrop.style.display = 'none';
+  splash.classList.add('hidden');
+  // remove from DOM after animation
+  setTimeout(()=> { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 600);
+}
+
+/* cacher le splash si le modèle est déjà petit/rapide à charger */
+function tryHideSplashIfReady() {
+  // si on a chargé >=80% et déjà passé 1s on peut fermer
+  if (modelLoadedPercent >= 80) hideSplash();
+}
+
+/* ============== model-viewer progress ============== */
+const viewer = document.getElementById('viewer');
+const progressBar = document.getElementById('progressBar');
+const progressLabel = document.getElementById('progressLabel');
+
+viewer.addEventListener('progress', (e) => {
+  const pct = Math.floor((e.detail.totalProgress || 0) * 100);
+  modelLoadedPercent = pct;
+  progressBar.style.width = pct + '%';
+  progressLabel.textContent = `Chargement ${pct}%`;
+  if (pct >= 100) {
+    progressLabel.textContent = 'Modèle chargé';
+    setTimeout(()=> {
+      progressBar.style.width = '100%';
+      // hide progress after a beat
+      setTimeout(()=> { progressLabel.style.display = 'none'; document.querySelector('.progress').style.display='none'; }, 700);
+    }, 200);
+    hideSplash();
+  } else {
+    // ensure progress wrapper visible
+    progressLabel.style.display = 'block';
+    document.querySelector('.progress').style.display = 'block';
   }
+});
 
-  function applyFilter(cat) {
-    currentFilter = cat;
-    // visuel boutons
-    document.querySelectorAll('.filter-btn').forEach(b=>{
-      b.classList.toggle('active', b.dataset.cat === cat);
-    });
-    renderPlans();
-  }
+viewer.addEventListener('error', (e) => {
+  console.error('model-viewer error', e);
+  progressLabel.textContent = 'Erreur chargement modèle';
+  setTimeout(()=> hideSplash(true), 1200);
+});
 
-  function renderPlans() {
-    plansList.innerHTML = '';
-    const visible = PLANS.filter(p => currentFilter === 'all' || p.category === currentFilter);
-    if (visible.length === 0) {
-      plansList.innerHTML = '<p style="color:#bbb">Aucun plan dans cette catégorie.</p>';
-      return;
-    }
+/* ============== Buttons & model switching ============== */
+function changeModel(path) {
+  viewer.src = path;
+  // show progress again
+  progressLabel.style.display = 'block';
+  document.querySelector('.progress').style.display = 'block';
+  progressBar.style.width = '4%';
+  progressLabel.textContent = 'Chargement 0%';
+  // show splash for subsequent loads
+  document.body.appendChild(splash); // reattach if removed (safe)
+  splash.classList.remove('hidden');
+  splashShownAt = performance.now();
+}
 
-    visible.forEach(plan=>{
-      const item = document.createElement('div');
-      item.className = 'plan-item';
+/* ============== Plans modal rendering ============== */
+const modalBackdrop = document.getElementById('modalBackdrop');
+const plansList = document.getElementById('plansList');
+const previewBackdrop = document.getElementById('previewBackdrop');
+const pdfPreviewIframe = document.getElementById('pdfPreviewIframe');
+const previewTitle = document.getElementById('previewTitle');
 
-      // left: checkbox + icon + meta
-      const left = document.createElement('div');
-      left.className = 'plan-left';
+let currentFilter = 'all';
+let selectedIds = new Set();
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = selectedIds.has(plan.id);
-      checkbox.style.width = '18px';
-      checkbox.style.height = '18px';
-      checkbox.onchange = (e) => {
-        if (e.target.checked) selectedIds.add(plan.id);
-        else selectedIds.delete(plan.id);
-      };
-
-      const icon = document.createElement('div');
-      icon.className = 'plan-icon';
-      icon.textContent = 'PDF';
-
-      const meta = document.createElement('div');
-      meta.className = 'plan-meta';
-      meta.innerHTML = `<strong>${plan.name}</strong><small>${plan.desc || ''}</small>`;
-
-      left.appendChild(checkbox);
-      left.appendChild(icon);
-      left.appendChild(meta);
-
-      // actions: view, download
-      const actions = document.createElement('div');
-      actions.className = 'plan-actions';
-
-      const viewBtn = document.createElement('button');
-      viewBtn.textContent = 'Voir';
-      viewBtn.onclick = () => previewPDF(plan);
-
-      const dlBtn = document.createElement('button');
-      dlBtn.textContent = 'Télécharger';
-      dlBtn.onclick = () => downloadPDF(plan.file);
-
-      actions.appendChild(viewBtn);
-      actions.appendChild(dlBtn);
-
-      item.appendChild(left);
-      item.appendChild(actions);
-
-      plansList.appendChild(item);
-    });
-  }
-
-  /* ---------------- Preview (voir avant télécharger) ---------------- */
-  function previewPDF(plan) {
-    const url = resolvePDF(plan.file);
-    // si iframe non supporté ou cross-origin bloqué, on ouvre en nouvel onglet
-    // normalement GitHub Pages permet l'affichage direct dans iframe.
-    previewTitle.textContent = plan.name;
-    pdfPreviewIframe.src = url;
-    previewBackdrop.style.display = 'flex';
-  }
-  function closePreview() {
-    pdfPreviewIframe.src = '';
-    previewBackdrop.style.display = 'none';
-  }
-
-  /* ---------------- Résolution et téléchargement des PDF --------------- */
-  function resolvePDF(path) {
-    if (!path) return '';
-    if (/^https?:\/\//i.test(path)) return encodeURI(path);
-    // fichier local dans le même dossier que index.html (ou ajuste ici si tu veux base GitHub Pages)
-    return encodeURI(path);
-    // OU pour GitHub Pages absolu :
-    // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
-  }
-
-  async function downloadPDF(path) {
-    const final = resolvePDF(path);
-    try {
-      const resp = await fetch(final, { method: 'GET', mode: 'cors' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const blob = await resp.blob();
-
-      // trouver un nom
-      let filename = 'document.pdf';
-      const cd = resp.headers.get('Content-Disposition');
-      if (cd) {
-        const m = /filename\*?=([^;]+)/i.exec(cd);
-        if (m && m[1]) filename = m[1].replace(/['"]/g, '');
-      } else {
-        const parts = final.split('/');
-        filename = parts[parts.length - 1] || filename;
-      }
-      filename = decodeURIComponent(filename).replace(/%20/g, '_');
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.warn('downloadPDF fallback - reason:', err);
-      window.open(final, '_blank');
-    }
-  }
-
-  function downloadSelected() {
-    if (selectedIds.size === 0) {
-      alert('Aucun plan sélectionné.');
-      return;
-    }
-    // télécharger séquentiellement pour éviter blocage popup
-    const toDownload = PLANS.filter(p => selectedIds.has(p.id));
-    const delay = 700;
-    toDownload.forEach((p, idx) => {
-      setTimeout(() => downloadPDF(p.file), idx * delay);
-    });
-  }
-
-  /* ------------------- model-viewer progress (conserve ton code) -------------------- */
-  const viewer = document.getElementById('modelViewer');
-  const loadingText = document.getElementById('loadingText');
-  const successMessage = document.getElementById('successMessage');
-
-  function showSuccessMessage() {
-    successMessage.style.display = 'block';
-    setTimeout(() => {
-      successMessage.style.display = 'none';
-    }, 2000);
-  }
-
-  viewer.addEventListener('progress', (event) => {
-    const progress = Math.floor(event.detail.totalProgress * 100);
-    loadingText.textContent = `Chargement... ${progress}%`;
-    loadingText.style.display = 'block';
-    if (progress === 100) {
-      setTimeout(() => {
-        loadingText.style.display = 'none';
-        showSuccessMessage();
-      }, 500);
-    }
-  });
-
-  function changeModel(path) {
-    viewer.src = path;
-    loadingText.textContent = 'Chargement... 0%';
-    loadingText.style.display = 'block';
-    successMessage.style.display = 'none';
-  }
-
-  // initial render
+function openPlans() {
   renderPlans();
+  modalBackdrop.style.display = 'flex';
+}
+function closePlans() { modalBackdrop.style.display = 'none'; }
 
+function applyFilter(cat){
+  currentFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  renderPlans();
+}
+
+function renderPlans() {
+  plansList.innerHTML = '';
+  const visible = PLANS.filter(p => currentFilter === 'all' || p.category === currentFilter);
+  if (visible.length === 0) {
+    plansList.innerHTML = '<p style="color:var(--muted)">Aucun plan dans cette catégorie.</p>';
+    return;
+  }
+
+  visible.forEach(plan=>{
+    const item = document.createElement('div'); item.className = 'plan-item';
+    const left = document.createElement('div'); left.style.display='flex'; left.style.gap='12px'; left.style.alignItems='center';
+
+    const checkbox = document.createElement('input'); checkbox.type='checkbox'; checkbox.checked = selectedIds.has(plan.id);
+    checkbox.onchange = (e)=> { if (e.target.checked) selectedIds.add(plan.id); else selectedIds.delete(plan.id); renderPlans(); };
+
+    const meta = document.createElement('div'); meta.className='plan-meta';
+    meta.innerHTML = `<strong>${plan.name}</strong><small style="color:var(--muted)">${plan.desc || ''}</small>`;
+
+    left.appendChild(checkbox); left.appendChild(meta);
+
+    const actions = document.createElement('div'); actions.className='plan-actions';
+    const viewBtn = document.createElement('button'); viewBtn.textContent='Voir'; viewBtn.onclick = ()=> previewPDF(plan);
+    const dlBtn = document.createElement('button'); dlBtn.textContent='Télécharger'; dlBtn.onclick = ()=> downloadPDF(plan.file);
+    actions.appendChild(viewBtn); actions.appendChild(dlBtn);
+
+    item.appendChild(left); item.appendChild(actions);
+    plansList.appendChild(item);
+  });
+}
+
+/* ============== Preview PDF ============== */
+function previewPDF(plan){
+  const url = resolvePDF(plan.file);
+  previewTitle.textContent = plan.name;
+  pdfPreviewIframe.src = url;
+  previewBackdrop.style.display = 'flex';
+}
+function closePreview(){
+  pdfPreviewIframe.src = '';
+  previewBackdrop.style.display = 'none';
+}
+
+/* ============== Resolve and download PDF (fetch->blob fallback) ============== */
+function resolvePDF(path) {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return encodeURI(path);
+  // Par défaut fichier local (même dossier que index.html)
+  // Si tu veux URL GitHub Pages absolue, décommente la ligne suivante et commente la return encodeURI(path);
+  // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
+  return encodeURI(path);
+}
+
+async function downloadPDF(path) {
+  const final = resolvePDF(path);
+  try {
+    const resp = await fetch(final, { method:'GET', mode:'cors' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+
+    // nom de fichier
+    let filename = 'document.pdf';
+    const cd = resp.headers.get('Content-Disposition');
+    if (cd) {
+      const m = /filename\*?=([^;]+)/i.exec(cd);
+      if (m && m[1]) filename = m[1].replace(/['"]/g,'');
+    } else {
+      const parts = final.split('/'); filename = parts[parts.length-1] || filename;
+    }
+    filename = decodeURIComponent(filename).replace(/%20/g,'_');
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  } catch (err) {
+    console.warn('downloadPDF fallback - reason:', err);
+    window.open(final, '_blank');
+  }
+}
+
+function downloadSelected() {
+  if (selectedIds.size === 0) { alert('Aucun plan sélectionné.'); return; }
+  const toDownload = PLANS.filter(p => selectedIds.has(p.id));
+  const delay = 650;
+  toDownload.forEach((p, idx) => setTimeout(()=> downloadPDF(p.file), idx * delay));
+}
+
+/* ============== Init ============== */
+// hide splash after minimum duration OR earlier if model loads fast
+splashShownAt = performance.now();
+setTimeout(()=> tryHideSplashIfReady(), 1000);
+
+// render plans initially
+renderPlans();
 </script>
-
 </body>
 </html>
