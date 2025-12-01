@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AR Switch Models + Loader</title>
+  <title>AR Switch Models + Plans - BETL</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
   <style>
-    body { margin: 0; background: #000; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; background: #000; font-family: Arial, Helvetica, sans-serif; color:#fff }
     model-viewer { width: 100vw; height: 100vh; }
 
     .switch-buttons {
@@ -19,15 +19,7 @@
       gap: 10px;
       z-index: 2;
     }
-
-    .switch-buttons button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background-color: #fff;
-      font-size: 14px;
-      cursor: pointer;
-    }
+    .switch-buttons button { padding: 10px 16px; border: none; border-radius: 8px; background-color: #fff; font-size: 14px; cursor: pointer; color:#000 }
 
     .download-btn {
       position: absolute;
@@ -53,6 +45,7 @@
       border-radius: 6px;
       font-size: 16px;
       z-index: 1;
+      color:#000;
     }
 
     #loadingText, #successMessage {
@@ -66,7 +59,6 @@
       border-radius: 10px;
       z-index: 2;
     }
-
     #loadingText { bottom: 120px; display: none; }
     #successMessage { bottom: 60px; color: #0f0; display: none; }
 
@@ -81,34 +73,22 @@
 
     /* Modal (liste de plans) */
     .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
     }
     .modal {
-      width: min(520px, 95%);
-      max-height: 80vh;
-      overflow: auto;
-      background: #111;
-      border-radius: 10px;
-      padding: 14px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.7);
-      color: #fff;
+      width: min(700px, 95%); max-height: 85vh; overflow: auto;
+      background: #111; border-radius: 10px; padding: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.7); color: #fff;
     }
     .modal h3 { margin: 0 0 8px 0; font-size:18px; }
-    .modal p { margin: 0 0 12px 0; color: #ccc; font-size:13px; }
+    .filters { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+    .filter-btn { padding:6px 10px; border-radius:8px; border:0; cursor:pointer; background:#222; color:#fff }
+    .filter-btn.active { background:#0a84ff }
+
     .plan-item {
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-      padding:8px;
-      border-radius:8px;
-      background: rgba(255,255,255,0.02);
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding:10px; border-radius:8px; background: rgba(255,255,255,0.02);
       margin-bottom:8px;
     }
     .plan-left { display:flex; gap:10px; align-items:center; }
@@ -116,17 +96,19 @@
     .plan-meta { font-size:14px; }
     .plan-meta small { display:block; color:#aaa; font-size:12px; }
     .plan-actions { display:flex; gap:8px; align-items:center; }
-    .plan-actions button {
-      padding:8px 10px; border-radius:8px; border:0; cursor:pointer; font-size:13px;
-      background:#fff; color:#000;
-    }
+    .plan-actions button { padding:8px 10px; border-radius:8px; border:0; cursor:pointer; font-size:13px; background:#fff; color:#000 }
     .modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
-    .close-btn { background:#444; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
-    .download-all { background:#0a84ff; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
 
+    .close-btn { background:#444; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .download-selected { background:#0a84ff; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
+
+    /* Preview modal */
+    .preview-iframe { width:90vw; height:80vh; border:0; background:#fff; border-radius:6px; }
+    .preview-modal .modal { padding:8px; }
     @media (max-width:480px){
       .plan-meta { font-size:13px; }
       .plan-icon{ width:40px; height:40px; }
+      .preview-iframe{ width:95vw; height:70vh; }
     }
   </style>
 </head>
@@ -147,8 +129,7 @@
   <div id="loadingText">Chargement... 0%</div>
   <div id="successMessage">✅ Modèle chargé avec succès</div>
 
-  <model-viewer 
-    id="modelViewer"
+  <model-viewer id="modelViewer"
     src="Villa_AR.glb"
     ar
     ar-modes="scene-viewer webxr"
@@ -159,8 +140,7 @@
     environment-image="neutral"
     alt="Modèle 3D AR"
     loading="eager"
-    reveal="auto"
-  >
+    reveal="auto">
     <button slot="ar-button" class="ar-button">Voir en Réalité Augmentée</button>
   </model-viewer>
 
@@ -168,184 +148,241 @@
   <div id="modalBackdrop" class="modal-backdrop" onclick="if(event.target===this) closePlans()">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="plansTitle">
       <h3 id="plansTitle">Plans à télécharger</h3>
-      <p>Sélectionnez le plan que vous souhaitez ouvrir ou télécharger. Les fichiers peuvent être hébergés localement ou sur GitHub Pages.</p>
+      <p style="color:#bbb; margin-top:6px">Filtrez par catégorie, visualisez un plan ou sélectionnez plusieurs éléments pour les télécharger.</p>
 
-      <div id="plansList">
-        <!-- Items générés dynamiquement -->
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-cat="all" onclick="applyFilter('all')">Tous</button>
+        <button class="filter-btn" data-cat="Architecture" onclick="applyFilter('Architecture')">Architecture</button>
+        <button class="filter-btn" data-cat="GC" onclick="applyFilter('GC')">Génie Civil</button>
+        <button class="filter-btn" data-cat="Autre" onclick="applyFilter('Autre')">Autre</button>
       </div>
+
+      <div id="plansList"></div>
 
       <div class="modal-footer">
         <button class="close-btn" onclick="closePlans()">Fermer</button>
-        <button class="download-all" onclick="downloadAll()">Télécharger tout</button>
+        <button class="download-selected" onclick="downloadSelected()">Télécharger sélection</button>
       </div>
     </div>
   </div>
 
-  <script>
-    const viewer = document.getElementById('modelViewer');
-    const loadingText = document.getElementById('loadingText');
-    const successMessage = document.getElementById('successMessage');
+  <!-- Preview modal -->
+  <div id="previewBackdrop" class="modal-backdrop preview-modal" onclick="if(event.target===this) closePreview()">
+    <div class="modal" style="width:min(95%,1100px);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong id="previewTitle"></strong>
+        <div>
+          <button class="close-btn" onclick="closePreview()">Fermer</button>
+        </div>
+      </div>
+      <iframe id="pdfPreviewIframe" class="preview-iframe" src=""></iframe>
+    </div>
+  </div>
 
-    function showSuccessMessage() {
-      successMessage.style.display = 'block';
-      setTimeout(() => {
-        successMessage.style.display = 'none';
-      }, 2000);
-    }
+<script>
+  /* ------------- CONFIG : liste des plans -------------
+     Ajoute ou modifie ici les éléments.
+     Chaque plan a : id, name, file, desc, category (Architecture | GC | Autre)
+  -----------------------------------------------------*/
+  const PLANS = [
+    { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)', category: 'Architecture' },
+    { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul', category: 'GC' },
+    // ex: { id:'elec', name:'Plan Electricité', file:'Plans_Electricite.pdf', desc:'Schéma electrique', category:'Autre' }
+  ];
 
-    viewer.addEventListener('progress', (event) => {
-      const progress = Math.floor(event.detail.totalProgress * 100);
-      loadingText.textContent = `Chargement... ${progress}%`;
-      loadingText.style.display = 'block';
+  // Elements
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const plansList = document.getElementById('plansList');
+  const previewBackdrop = document.getElementById('previewBackdrop');
+  const pdfPreviewIframe = document.getElementById('pdfPreviewIframe');
+  const previewTitle = document.getElementById('previewTitle');
 
-      if (progress === 100) {
-        setTimeout(() => {
-          loadingText.style.display = 'none';
-          showSuccessMessage();
-        }, 500);
-      }
+  // état du filtre et sélection
+  let currentFilter = 'all';
+  let selectedIds = new Set();
+
+  function openPlans() {
+    renderPlans();
+    modalBackdrop.style.display = 'flex';
+  }
+  function closePlans() {
+    modalBackdrop.style.display = 'none';
+  }
+
+  function applyFilter(cat) {
+    currentFilter = cat;
+    // visuel boutons
+    document.querySelectorAll('.filter-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.cat === cat);
     });
+    renderPlans();
+  }
 
-    function changeModel(path) {
-      viewer.src = path;
-      loadingText.textContent = 'Chargement... 0%';
-      loadingText.style.display = 'block';
+  function renderPlans() {
+    plansList.innerHTML = '';
+    const visible = PLANS.filter(p => currentFilter === 'all' || p.category === currentFilter);
+    if (visible.length === 0) {
+      plansList.innerHTML = '<p style="color:#bbb">Aucun plan dans cette catégorie.</p>';
+      return;
+    }
+
+    visible.forEach(plan=>{
+      const item = document.createElement('div');
+      item.className = 'plan-item';
+
+      // left: checkbox + icon + meta
+      const left = document.createElement('div');
+      left.className = 'plan-left';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = selectedIds.has(plan.id);
+      checkbox.style.width = '18px';
+      checkbox.style.height = '18px';
+      checkbox.onchange = (e) => {
+        if (e.target.checked) selectedIds.add(plan.id);
+        else selectedIds.delete(plan.id);
+      };
+
+      const icon = document.createElement('div');
+      icon.className = 'plan-icon';
+      icon.textContent = 'PDF';
+
+      const meta = document.createElement('div');
+      meta.className = 'plan-meta';
+      meta.innerHTML = `<strong>${plan.name}</strong><small>${plan.desc || ''}</small>`;
+
+      left.appendChild(checkbox);
+      left.appendChild(icon);
+      left.appendChild(meta);
+
+      // actions: view, download
+      const actions = document.createElement('div');
+      actions.className = 'plan-actions';
+
+      const viewBtn = document.createElement('button');
+      viewBtn.textContent = 'Voir';
+      viewBtn.onclick = () => previewPDF(plan);
+
+      const dlBtn = document.createElement('button');
+      dlBtn.textContent = 'Télécharger';
+      dlBtn.onclick = () => downloadPDF(plan.file);
+
+      actions.appendChild(viewBtn);
+      actions.appendChild(dlBtn);
+
+      item.appendChild(left);
+      item.appendChild(actions);
+
+      plansList.appendChild(item);
+    });
+  }
+
+  /* ---------------- Preview (voir avant télécharger) ---------------- */
+  function previewPDF(plan) {
+    const url = resolvePDF(plan.file);
+    // si iframe non supporté ou cross-origin bloqué, on ouvre en nouvel onglet
+    // normalement GitHub Pages permet l'affichage direct dans iframe.
+    previewTitle.textContent = plan.name;
+    pdfPreviewIframe.src = url;
+    previewBackdrop.style.display = 'flex';
+  }
+  function closePreview() {
+    pdfPreviewIframe.src = '';
+    previewBackdrop.style.display = 'none';
+  }
+
+  /* ---------------- Résolution et téléchargement des PDF --------------- */
+  function resolvePDF(path) {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return encodeURI(path);
+    // fichier local dans le même dossier que index.html (ou ajuste ici si tu veux base GitHub Pages)
+    return encodeURI(path);
+    // OU pour GitHub Pages absolu :
+    // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
+  }
+
+  async function downloadPDF(path) {
+    const final = resolvePDF(path);
+    try {
+      const resp = await fetch(final, { method: 'GET', mode: 'cors' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+
+      // trouver un nom
+      let filename = 'document.pdf';
+      const cd = resp.headers.get('Content-Disposition');
+      if (cd) {
+        const m = /filename\*?=([^;]+)/i.exec(cd);
+        if (m && m[1]) filename = m[1].replace(/['"]/g, '');
+      } else {
+        const parts = final.split('/');
+        filename = parts[parts.length - 1] || filename;
+      }
+      filename = decodeURIComponent(filename).replace(/%20/g, '_');
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('downloadPDF fallback - reason:', err);
+      window.open(final, '_blank');
+    }
+  }
+
+  function downloadSelected() {
+    if (selectedIds.size === 0) {
+      alert('Aucun plan sélectionné.');
+      return;
+    }
+    // télécharger séquentiellement pour éviter blocage popup
+    const toDownload = PLANS.filter(p => selectedIds.has(p.id));
+    const delay = 700;
+    toDownload.forEach((p, idx) => {
+      setTimeout(() => downloadPDF(p.file), idx * delay);
+    });
+  }
+
+  /* ------------------- model-viewer progress (conserve ton code) -------------------- */
+  const viewer = document.getElementById('modelViewer');
+  const loadingText = document.getElementById('loadingText');
+  const successMessage = document.getElementById('successMessage');
+
+  function showSuccessMessage() {
+    successMessage.style.display = 'block';
+    setTimeout(() => {
       successMessage.style.display = 'none';
+    }, 2000);
+  }
+
+  viewer.addEventListener('progress', (event) => {
+    const progress = Math.floor(event.detail.totalProgress * 100);
+    loadingText.textContent = `Chargement... ${progress}%`;
+    loadingText.style.display = 'block';
+    if (progress === 100) {
+      setTimeout(() => {
+        loadingText.style.display = 'none';
+        showSuccessMessage();
+      }, 500);
     }
+  });
 
-    /* =======================
-       Liste des plans (modifiable)
-       Met ici les PDFs — si tu les héberges sur GitHub Pages, mets l'URL complète
-       NOTE: j'ai remplacé le nom avec underscores pour éviter problèmes d'espaces
-    =========================*/
-    const PLANS = [
-      { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)' },
-      { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul' },
-      // ajouter d'autres plans si besoin
-    ];
+  function changeModel(path) {
+    viewer.src = path;
+    loadingText.textContent = 'Chargement... 0%';
+    loadingText.style.display = 'block';
+    successMessage.style.display = 'none';
+  }
 
-    const modalBackdrop = document.getElementById('modalBackdrop');
-    const plansList = document.getElementById('plansList');
+  // initial render
+  renderPlans();
 
-    function openPlans() {
-      renderPlans();
-      modalBackdrop.style.display = 'flex';
-    }
-
-    function closePlans() {
-      modalBackdrop.style.display = 'none';
-    }
-
-    function renderPlans() {
-      plansList.innerHTML = '';
-      PLANS.forEach(plan=>{
-        const item = document.createElement('div');
-        item.className = 'plan-item';
-
-        const left = document.createElement('div');
-        left.className = 'plan-left';
-        const icon = document.createElement('div');
-        icon.className = 'plan-icon';
-        icon.textContent = 'PDF';
-        const meta = document.createElement('div');
-        meta.className = 'plan-meta';
-        meta.innerHTML = `<strong>${plan.name}</strong><small>${plan.desc || ''}</small>`;
-
-        left.appendChild(icon);
-        left.appendChild(meta);
-
-        const actions = document.createElement('div');
-        actions.className = 'plan-actions';
-        const openBtn = document.createElement('button');
-        openBtn.textContent = 'Ouvrir';
-        openBtn.onclick = ()=> openPDF(plan.file);
-
-        const dlBtn = document.createElement('button');
-        dlBtn.textContent = 'Télécharger';
-        dlBtn.onclick = ()=> downloadPDF(plan.file);
-
-        actions.appendChild(openBtn);
-        actions.appendChild(dlBtn);
-
-        item.appendChild(left);
-        item.appendChild(actions);
-
-        plansList.appendChild(item);
-      });
-    }
-
-    /* ===============
-       Résolution et téléchargement des PDF - méthode fiable
-       - resolvePDF: encode correctement les chemins et gère URL complètes
-       - openPDF: ouvre dans un nouvel onglet (fallback simple)
-       - downloadPDF: fetch -> blob -> download (force le download si possible)
-       - downloadAll: lance les téléchargements séquentiels avec petit délai
-       ===============*/
-
-    function resolvePDF(path) {
-      if (!path) return '';
-      // si c'est une URL complète, encode et retourne
-      if (/^https?:\/\//i.test(path)) return encodeURI(path);
-
-      // sinon, on suppose fichier local dans le même dossier que l'index.html
-      // encodeURI pour gérer espaces et caractères spéciaux
-      return encodeURI(path);
-      // Si tu préfères utiliser GitHub Pages absolu, remplace par :
-      // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
-    }
-
-    function openPDF(path) {
-      const final = resolvePDF(path);
-      try {
-        window.open(final, '_blank');
-      } catch (err) {
-        console.error('openPDF error', err);
-        alert('Impossible d’ouvrir le PDF directement. Vérifie l’URL.');
-      }
-    }
-
-    async function downloadPDF(path) {
-      const final = resolvePDF(path);
-      try {
-        const resp = await fetch(final, { method: 'GET', mode: 'cors' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const blob = await resp.blob();
-
-        // Extraire un nom correct
-        let filename = 'document.pdf';
-        const cd = resp.headers.get('Content-Disposition');
-        if (cd) {
-          const m = /filename\*?=([^;]+)/i.exec(cd);
-          if (m && m[1]) filename = m[1].replace(/['"]/g, '');
-        } else {
-          const parts = final.split('/');
-          filename = parts[parts.length - 1] || filename;
-        }
-        filename = decodeURIComponent(filename).replace(/%20/g, '_');
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.warn('downloadPDF fallback (open in new tab) - reason:', err);
-        // fallback : ouvrir dans un nouvel onglet, l'utilisateur pourra ensuite sauvegarder
-        window.open(final, '_blank');
-      }
-    }
-
-    function downloadAll() {
-      const delay = 600; // ms entre chaque téléchargement pour réduire blocage popup
-      PLANS.forEach((plan, idx) => {
-        setTimeout(()=> downloadPDF(plan.file), idx * delay);
-      });
-    }
-
-  </script>
+</script>
 
 </body>
 </html>
