@@ -20,12 +20,14 @@
     html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
     /* ---------- Top menu responsive ---------- */
     .top-menu{position:absolute;top:12px;left:0;width:100%;padding:0 12px;display:flex;justify-content:space-between;align-items:center;z-index:40;box-sizing:border-box}
-    .left-buttons{display:flex;gap:10px}
+    .left-buttons{display:flex;gap:10px;align-items:center}
     .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--glass);color:var(--white);font-size:14px;cursor:pointer;backdrop-filter: blur(4px)}
     .btn.primary{background:var(--white);color:#000}
     .btn.icon{display:inline-flex;gap:8px;align-items:center}
     .btn.small{padding:8px 10px;font-size:13px}
-    .logo-small{height:40px;width:auto;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+    /* logo top-left */
+    .logo-link { display:flex; align-items:center; gap:10px; margin-right:8px; text-decoration:none; color:inherit; }
+    .logo-small{height:44px;width:auto;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
     @media (max-width:480px){
       .btn{padding:8px 10px;font-size:13px;border-radius:8px}
       .logo-small{height:36px}
@@ -69,6 +71,7 @@
     .splash.hidden{opacity:0;pointer-events:none;transform:scale(.98)}
     .splash-logo{width:260px;max-width:60vw;height:auto;display:block;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.6))}
     .splash-sub{margin-top:12px;color:var(--muted);font-size:14px}
+    .splash-percent{margin-top:8px;color:var(--muted);font-size:13px}
 
     /* small intro animation */
     @keyframes pulse {
@@ -88,8 +91,13 @@
   <!-- Top menu with left buttons and right pdf -->
   <div class="top-menu">
     <div class="left-buttons">
+      <!-- Logo top-left (clic pour Facebook). 
+           Comment: remplace href par ta page FB si besoin -->
+      <a class="logo-link" href="https://www.facebook.com/BETL121" target="_blank" title="Notre page Facebook (s'ouvre sur clic)">
+        <img src="BETL.png" alt="BETL" class="logo-small" />
+      </a>
+
       <button class="btn" onclick="changeModel('Villa_AR.glb')">
-        <!-- small architecture icon -->
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><path d="M12 3l9 6v9a1 1 0 0 1-1 1h-4v-6H8v6H4a1 1 0 0 1-1-1V9l9-6z" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Architecture
       </button>
@@ -101,7 +109,6 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:10px">
-      <img src="BETL.png" alt="BETL" class="logo-small" />
       <button class="btn primary icon" onclick="openPlans()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M21 15v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5 5 5-5" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Télécharger PDF
@@ -120,10 +127,11 @@
     reveal="auto"
     exposure="1"
     shadow-intensity="1">
+    <!-- AR button stays at bottom center -->
     <button slot="ar-button" class="ar-button">Voir en Réalité Augmentée</button>
   </model-viewer>
 
-  <!-- Progress indicator -->
+  <!-- Progress indicator (bar + label) -->
   <div class="progress-wrap" aria-hidden="true">
     <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
     <div class="progress-label" id="progressLabel">Chargement 0%</div>
@@ -168,6 +176,7 @@
   <div id="splash" class="splash" role="status" aria-live="polite">
     <img src="BETL.png" alt="BETL" class="splash-logo" />
     <div class="splash-sub">Chargement du modèle…</div>
+    <div class="splash-percent" id="splashPercent">0%</div>
   </div>
 
 <script>
@@ -186,24 +195,22 @@ const PLANS = [
 
 /* ============== Splash logic ============== */
 const splash = document.getElementById('splash');
+const splashPercent = document.getElementById('splashPercent');
 let splashShownAt = performance.now();
 let modelLoadedPercent = 0;
 
 function hideSplash(force=false) {
   const elapsed = performance.now() - splashShownAt;
   if (!force && elapsed < SPLASH_DURATION_MS) {
-    // attendre la durée minimale
     setTimeout(() => hideSplash(true), SPLASH_DURATION_MS - elapsed + 50);
     return;
   }
   splash.classList.add('hidden');
-  // remove from DOM after animation
   setTimeout(()=> { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 600);
 }
 
 /* cacher le splash si le modèle est déjà petit/rapide à charger */
 function tryHideSplashIfReady() {
-  // si on a chargé >=80% et déjà passé 1s on peut fermer
   if (modelLoadedPercent >= 80) hideSplash();
 }
 
@@ -215,18 +222,24 @@ const progressLabel = document.getElementById('progressLabel');
 viewer.addEventListener('progress', (e) => {
   const pct = Math.floor((e.detail.totalProgress || 0) * 100);
   modelLoadedPercent = pct;
+
+  // update progress bar + label
   progressBar.style.width = pct + '%';
   progressLabel.textContent = `Chargement ${pct}%`;
+
+  // update splash percent if visible
+  if (splash && !splash.classList.contains('hidden')) {
+    splashPercent.textContent = pct + '%';
+  }
+
   if (pct >= 100) {
     progressLabel.textContent = 'Modèle chargé';
     setTimeout(()=> {
       progressBar.style.width = '100%';
-      // hide progress after a beat
       setTimeout(()=> { progressLabel.style.display = 'none'; document.querySelector('.progress').style.display='none'; }, 700);
     }, 200);
     hideSplash();
   } else {
-    // ensure progress wrapper visible
     progressLabel.style.display = 'block';
     document.querySelector('.progress').style.display = 'block';
   }
@@ -241,13 +254,15 @@ viewer.addEventListener('error', (e) => {
 /* ============== Buttons & model switching ============== */
 function changeModel(path) {
   viewer.src = path;
-  // show progress again
   progressLabel.style.display = 'block';
   document.querySelector('.progress').style.display = 'block';
   progressBar.style.width = '4%';
   progressLabel.textContent = 'Chargement 0%';
+
   // show splash for subsequent loads
-  document.body.appendChild(splash); // reattach if removed (safe)
+  if (!document.body.contains(splash)) {
+    document.body.appendChild(splash);
+  }
   splash.classList.remove('hidden');
   splashShownAt = performance.now();
 }
@@ -365,7 +380,7 @@ function downloadSelected() {
 splashShownAt = performance.now();
 setTimeout(()=> tryHideSplashIfReady(), 1000);
 
-// render plans initially
+// initial render
 renderPlans();
 </script>
 </body>
