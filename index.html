@@ -18,14 +18,13 @@
       --glass: rgba(255,255,255,0.06);
     }
     html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
-    /* ---------- Top menu responsive ---------- */
+    /* Top menu */
     .top-menu{position:absolute;top:12px;left:0;width:100%;padding:0 12px;display:flex;justify-content:space-between;align-items:center;z-index:40;box-sizing:border-box}
     .left-buttons{display:flex;gap:10px;align-items:center}
     .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--glass);color:var(--white);font-size:14px;cursor:pointer;backdrop-filter: blur(4px)}
     .btn.primary{background:var(--white);color:#000}
     .btn.icon{display:inline-flex;gap:8px;align-items:center}
     .btn.small{padding:8px 10px;font-size:13px}
-    /* logo top-left */
     .logo-link { display:flex; align-items:center; gap:10px; margin-right:8px; text-decoration:none; color:inherit; }
     .logo-small{height:44px;width:auto;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
     @media (max-width:480px){
@@ -33,23 +32,35 @@
       .logo-small{height:36px}
     }
 
-    /* ---------- model-viewer full-screen ---------- */
+    /* model-viewer fullscreen */
     model-viewer{width:100vw;height:100vh;display:block}
 
-    /* ---------- AR button styling (model-viewer slot) ---------- */
+    /* AR button - always on top, bottom center */
     .ar-button{
-      position:absolute;left:50%;transform:translateX(-50%);
-      bottom:18px;padding:14px 20px;border-radius:12px;background:rgba(255,255,255,0.95);color:#000;border:0;font-weight:600;z-index:30;
+      position:absolute;
+      bottom:18px;
+      left:50%;
+      transform:translateX(-50%);
+      padding:14px 22px;
+      background:#ffffff;
+      color:#000;
+      border:none;
+      border-radius:12px;
+      font-size:16px;
+      font-weight:600;
       box-shadow:0 8px 24px rgba(0,0,0,0.6);
+      z-index:9999;
+      cursor:pointer;
+      display:block;
     }
 
-    /* ---------- Progress bar ---------- */
+    /* Progress bar */
     .progress-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:86px;z-index:30;display:flex;align-items:center;gap:12px;pointer-events:none}
     .progress{width:240px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden}
     .progress > span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#4bd3ff);transition:width 200ms ease}
     .progress-label{color:var(--muted);font-size:13px;pointer-events:auto}
 
-    /* ---------- Modal / Plans ---------- */
+    /* Modal / Plans */
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:80}
     .modal{width:min(760px,96%);max-height:86vh;background:var(--card);border-radius:12px;padding:16px;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,0.7)}
     .filters{display:flex;gap:10px;margin:8px 0 12px 0;flex-wrap:wrap}
@@ -59,41 +70,30 @@
     .plan-meta strong{display:block}
     .plan-actions button{margin-left:8px;padding:8px 10px;border-radius:8px;border:0;background:var(--white);color:#000;cursor:pointer}
 
-    /* Preview modal */
+    /* Preview */
     .preview-iframe{width:90vw;height:78vh;border:0;border-radius:8px;background:#fff}
     .preview-modal .modal{padding:10px}
 
-    /* ---------- Splash screen ---------- */
-    .splash{
-      position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:200;
-      transition:opacity .4s ease, transform .4s ease;
-    }
+    /* Splash */
+    .splash{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:200;transition:opacity .4s ease, transform .4s ease}
     .splash.hidden{opacity:0;pointer-events:none;transform:scale(.98)}
     .splash-logo{width:260px;max-width:60vw;height:auto;display:block;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.6))}
     .splash-sub{margin-top:12px;color:var(--muted);font-size:14px}
     .splash-percent{margin-top:8px;color:var(--muted);font-size:13px}
-
-    /* small intro animation */
-    @keyframes pulse {
-      0%{transform:scale(0.98);opacity:0.9}
-      50%{transform:scale(1);opacity:1}
-      100%{transform:scale(0.98);opacity:0.9}
-    }
+    @keyframes pulse {0%{transform:scale(0.98);opacity:0.9}50%{transform:scale(1);opacity:1}100%{transform:scale(0.98);opacity:0.9}}
     .splash-logo{animation:pulse 2.6s infinite ease-in-out}
 
-    /* ---------- utilities ---------- */
+    /* utilities */
     .hidden{display:none}
     a.no-dec{color:inherit;text-decoration:none}
   </style>
 </head>
 <body>
 
-  <!-- Top menu with left buttons and right pdf -->
+  <!-- TOP MENU (logo top-left clickable to Facebook) -->
   <div class="top-menu">
     <div class="left-buttons">
-      <!-- Logo top-left (clic pour Facebook). 
-           Comment: remplace href par ta page FB si besoin -->
-      <a class="logo-link" href="https://www.facebook.com/BETL121" target="_blank" title="Notre page Facebook (s'ouvre sur clic)">
+      <a class="logo-link" href="https://www.facebook.com/BETL121" target="_blank" title="Notre page Facebook (clic)">
         <img src="BETL.png" alt="BETL" class="logo-small" />
       </a>
 
@@ -116,7 +116,7 @@
     </div>
   </div>
 
-  <!-- Model viewer -->
+  <!-- MODEL VIEWER -->
   <model-viewer id="viewer"
     src="Villa_AR.glb"
     alt="Modèle 3D BETL"
@@ -127,13 +127,15 @@
     reveal="auto"
     exposure="1"
     shadow-intensity="1">
-    <!-- AR button stays at bottom center -->
-    <button slot="ar-button" class="ar-button">Voir en Réalité Augmentée</button>
+    <!-- AR button slot (we ensure it's always visible with script) -->
+    <button slot="ar-button" class="ar-button" id="arBtn">Voir en Réalité Augmentée</button>
   </model-viewer>
 
-  <!-- Progress indicator (bar + label) -->
+  <!-- Progress indicator -->
   <div class="progress-wrap" aria-hidden="true">
-    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+      <span id="progressBar"></span>
+    </div>
     <div class="progress-label" id="progressLabel">Chargement 0%</div>
   </div>
 
@@ -164,9 +166,7 @@
     <div class="modal" style="width:min(95%,1100px);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <strong id="previewTitle"></strong>
-        <div>
-          <button class="btn small" onclick="closePreview()">Fermer</button>
-        </div>
+        <div><button class="btn small" onclick="closePreview()">Fermer</button></div>
       </div>
       <iframe id="pdfPreviewIframe" class="preview-iframe" src=""></iframe>
     </div>
@@ -180,17 +180,11 @@
   </div>
 
 <script>
-/* ============== CONFIG ================
-   - SPLASH_DURATION_MS : durée minimale du splash (ms)
-   - change PLANS[] et filenames si nécessaire
-   - si tu héberges PDFs sur GitHub Pages, remplace resolvePDF accordingly
-========================================*/
-const SPLASH_DURATION_MS = 3000; // 3000 = 3s ; tu peux mettre 5000 pour 5s
-
+/* ============== CONFIG ================ */
+const SPLASH_DURATION_MS = 3000; // ms
 const PLANS = [
   { id: 'arch', name: 'Plan Architecture - Villa', file: 'villa_Boubekri_redouane.pdf', desc: 'Plans architecturaux (A3, coupes, façades)', category: 'Architecture' },
   { id: 'gc',   name: 'Plan Génie Civil - Villa', file: 'Plans_Villa_GC.pdf', desc: 'Fondations, ferraillage, notes de calcul', category: 'GC' },
-  // ajoute d'autres éléments si besoin
 ];
 
 /* ============== Splash logic ============== */
@@ -208,8 +202,6 @@ function hideSplash(force=false) {
   splash.classList.add('hidden');
   setTimeout(()=> { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 600);
 }
-
-/* cacher le splash si le modèle est déjà petit/rapide à charger */
 function tryHideSplashIfReady() {
   if (modelLoadedPercent >= 80) hideSplash();
 }
@@ -222,15 +214,9 @@ const progressLabel = document.getElementById('progressLabel');
 viewer.addEventListener('progress', (e) => {
   const pct = Math.floor((e.detail.totalProgress || 0) * 100);
   modelLoadedPercent = pct;
-
-  // update progress bar + label
   progressBar.style.width = pct + '%';
   progressLabel.textContent = `Chargement ${pct}%`;
-
-  // update splash percent if visible
-  if (splash && !splash.classList.contains('hidden')) {
-    splashPercent.textContent = pct + '%';
-  }
+  if (splash && !splash.classList.contains('hidden')) splashPercent.textContent = pct + '%';
 
   if (pct >= 100) {
     progressLabel.textContent = 'Modèle chargé';
@@ -245,29 +231,40 @@ viewer.addEventListener('progress', (e) => {
   }
 });
 
+viewer.addEventListener('load', () => {
+  // ensure AR button visible after successful load
+  const arBtn = document.getElementById('arBtn');
+  if (arBtn) arBtn.style.display = 'block';
+});
+
 viewer.addEventListener('error', (e) => {
   console.error('model-viewer error', e);
   progressLabel.textContent = 'Erreur chargement modèle';
   setTimeout(()=> hideSplash(true), 1200);
 });
 
-/* ============== Buttons & model switching ============== */
+/* Add ar-status listener to hide button if AR is not possible on device */
+viewer.addEventListener('ar-status', (ev) => {
+  const btn = document.getElementById('arBtn');
+  if (!btn) return;
+  // if status failed, hide; if ready, show
+  if (ev.detail && ev.detail.status === 'failed') btn.style.display = 'none';
+  else btn.style.display = 'block';
+});
+
+/* ============== Buttons & switching ============== */
 function changeModel(path) {
   viewer.src = path;
   progressLabel.style.display = 'block';
   document.querySelector('.progress').style.display = 'block';
   progressBar.style.width = '4%';
   progressLabel.textContent = 'Chargement 0%';
-
-  // show splash for subsequent loads
-  if (!document.body.contains(splash)) {
-    document.body.appendChild(splash);
-  }
+  if (!document.body.contains(splash)) document.body.appendChild(splash);
   splash.classList.remove('hidden');
   splashShownAt = performance.now();
 }
 
-/* ============== Plans modal rendering ============== */
+/* ============== Plans modal ============== */
 const modalBackdrop = document.getElementById('modalBackdrop');
 const plansList = document.getElementById('plansList');
 const previewBackdrop = document.getElementById('previewBackdrop');
@@ -277,12 +274,8 @@ const previewTitle = document.getElementById('previewTitle');
 let currentFilter = 'all';
 let selectedIds = new Set();
 
-function openPlans() {
-  renderPlans();
-  modalBackdrop.style.display = 'flex';
-}
+function openPlans() { renderPlans(); modalBackdrop.style.display = 'flex'; }
 function closePlans() { modalBackdrop.style.display = 'none'; }
-
 function applyFilter(cat){
   currentFilter = cat;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
@@ -292,52 +285,37 @@ function applyFilter(cat){
 function renderPlans() {
   plansList.innerHTML = '';
   const visible = PLANS.filter(p => currentFilter === 'all' || p.category === currentFilter);
-  if (visible.length === 0) {
-    plansList.innerHTML = '<p style="color:var(--muted)">Aucun plan dans cette catégorie.</p>';
-    return;
-  }
-
+  if (visible.length === 0) { plansList.innerHTML = '<p style="color:var(--muted)">Aucun plan dans cette catégorie.</p>'; return; }
   visible.forEach(plan=>{
     const item = document.createElement('div'); item.className = 'plan-item';
     const left = document.createElement('div'); left.style.display='flex'; left.style.gap='12px'; left.style.alignItems='center';
-
     const checkbox = document.createElement('input'); checkbox.type='checkbox'; checkbox.checked = selectedIds.has(plan.id);
     checkbox.onchange = (e)=> { if (e.target.checked) selectedIds.add(plan.id); else selectedIds.delete(plan.id); renderPlans(); };
-
     const meta = document.createElement('div'); meta.className='plan-meta';
     meta.innerHTML = `<strong>${plan.name}</strong><small style="color:var(--muted)">${plan.desc || ''}</small>`;
-
     left.appendChild(checkbox); left.appendChild(meta);
-
     const actions = document.createElement('div'); actions.className='plan-actions';
     const viewBtn = document.createElement('button'); viewBtn.textContent='Voir'; viewBtn.onclick = ()=> previewPDF(plan);
     const dlBtn = document.createElement('button'); dlBtn.textContent='Télécharger'; dlBtn.onclick = ()=> downloadPDF(plan.file);
     actions.appendChild(viewBtn); actions.appendChild(dlBtn);
-
     item.appendChild(left); item.appendChild(actions);
     plansList.appendChild(item);
   });
 }
 
-/* ============== Preview PDF ============== */
+/* Preview PDF */
 function previewPDF(plan){
   const url = resolvePDF(plan.file);
   previewTitle.textContent = plan.name;
   pdfPreviewIframe.src = url;
   previewBackdrop.style.display = 'flex';
 }
-function closePreview(){
-  pdfPreviewIframe.src = '';
-  previewBackdrop.style.display = 'none';
-}
+function closePreview(){ pdfPreviewIframe.src = ''; previewBackdrop.style.display = 'none'; }
 
-/* ============== Resolve and download PDF (fetch->blob fallback) ============== */
+/* Resolve & download PDF */
 function resolvePDF(path) {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return encodeURI(path);
-  // Par défaut fichier local (même dossier que index.html)
-  // Si tu veux URL GitHub Pages absolue, décommente la ligne suivante et commente la return encodeURI(path);
-  // return `https://betdelest.github.io/Boubekri_Redouane/${encodeURI(path)}`;
   return encodeURI(path);
 }
 
@@ -347,8 +325,6 @@ async function downloadPDF(path) {
     const resp = await fetch(final, { method:'GET', mode:'cors' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const blob = await resp.blob();
-
-    // nom de fichier
     let filename = 'document.pdf';
     const cd = resp.headers.get('Content-Disposition');
     if (cd) {
@@ -358,7 +334,6 @@ async function downloadPDF(path) {
       const parts = final.split('/'); filename = parts[parts.length-1] || filename;
     }
     filename = decodeURIComponent(filename).replace(/%20/g,'_');
-
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
@@ -376,11 +351,8 @@ function downloadSelected() {
 }
 
 /* ============== Init ============== */
-// hide splash after minimum duration OR earlier if model loads fast
 splashShownAt = performance.now();
 setTimeout(()=> tryHideSplashIfReady(), 1000);
-
-// initial render
 renderPlans();
 </script>
 </body>
